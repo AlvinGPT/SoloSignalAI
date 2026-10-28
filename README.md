@@ -475,7 +475,7 @@ These tests help determine how reliably the system distinguishes normal movement
 
 **Coming soon**
 
-`[ Add presentation link here ]`
+`https://canva.link/solo-signal-ai`
 
 ---
 
