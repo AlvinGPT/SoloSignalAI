@@ -473,8 +473,6 @@ These tests help determine how reliably the system distinguishes normal movement
 
 ## Project Presentation
 
-**Coming soon**
-
 `https://canva.link/solo-signal-ai`
 
 ---
