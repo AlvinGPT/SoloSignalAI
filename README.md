@@ -2,9 +2,8 @@
 
 ### AI-Powered Personal Safety System Using Smartphone Motion Sensors
 
-**Student:** Figo Suresh  
-**Class:** 11C  
-**Project:** Physics / Computer Science Project  
+**Created By:** Figo Suresh and Alvin B Abhilash 
+**Project:** AI / Computer Science Project  
 **Project Type:** Prototype / Academic Project
 
 ---
@@ -32,7 +31,7 @@ The main objectives of SoloSignal AI are:
 - To use AI to analyze movement patterns rather than relying only on a single sensor reading.
 - To provide an **“I’m Okay”** confirmation system after a possible fall.
 - To explore automatic SOS notifications to a trusted contact.
-- To connect real-world technology with **Class 11 CBSE Physics concepts**.
+
 
 ---
 
@@ -186,76 +185,7 @@ The system should clearly indicate when microphone access is being used and foll
 
 ---
 
-# 🔬 Physics Connection
 
-SoloSignal AI connects directly with concepts from the **CBSE Class 11 Physics syllabus**.
-
-## Chapter 2 — Motion in a Straight Line
-
-Acceleration describes the rate of change of velocity.
-
-**Formula:**
-
-**a = (v − u) / t**
-
-Where:
-
-- **a** = acceleration
-- **v** = final velocity
-- **u** = initial velocity
-- **t** = time taken
-
-### Application in SoloSignal AI
-
-A sudden change in motion can produce a noticeable change in acceleration.
-
-The accelerometer helps capture these changes, which can then be analyzed by the system.
-
----
-
-## Chapter 3 — Motion in a Plane
-
-Smartphone motion does not occur along only one direction.
-
-The accelerometer measures movement across multiple axes.
-
-Acceleration can therefore be represented as:
-
-**a⃗ = aₓ î + aᵧ ĵ + a𝓏 k̂**
-
-Where:
-
-- **aₓ** = acceleration along the x-axis
-- **aᵧ** = acceleration along the y-axis
-- **a𝓏** = acceleration along the z-axis
-
-### Application in SoloSignal AI
-
-Combining these axes gives the system a better representation of how the phone is moving in three-dimensional space.
-
----
-
-## Chapter 4 — Laws of Motion
-
-Newton's Second Law states:
-
-**F⃗ₙₑₜ = m a⃗**
-
-Where:
-
-- **F⃗ₙₑₜ** = net force
-- **m** = mass
-- **a⃗** = acceleration
-
-### Application in SoloSignal AI
-
-Changes in acceleration are physically related to changes in the net force acting on an object.
-
-This provides a physical foundation for understanding why sudden movements can produce significant sensor readings.
-
-The app does **not** directly calculate the user's actual force during a fall. Instead, the Physics concepts help explain the motion and acceleration measured by the smartphone sensors.
-
----
 
 # 🧠 Physics + AI
 
@@ -453,8 +383,6 @@ Used to access smartphone motion sensor data.
 - ⏱️ Emergency countdown
 - ☁️ Firebase backend integration
 - 📩 Trusted-contact notification concept
-- 🎙️ Optional emergency audio evidence
-- 🔐 Permission-based microphone access
 - 🔄 Retry and recovery considerations for network failures
 
 ---
@@ -521,23 +449,6 @@ If the device has poor or no connectivity, notification delivery may be delayed 
 
 ---
 
-# 🚀 Future Scope
-
-The project could be expanded in several ways:
-
-- Improve fall-detection accuracy using larger datasets.
-- Train a dedicated machine-learning model.
-- Add gyroscope and other sensor data.
-- Improve location sharing.
-- Add wearable-device integration.
-- Support multiple emergency contacts.
-- Add multilingual emergency messages.
-- Improve offline detection and delayed synchronization.
-- Add stronger privacy controls.
-- Conduct controlled testing with different movement patterns.
-- Develop a more reliable production-level emergency communication system.
-
----
 
 # 📊 Project Evaluation
 
@@ -560,18 +471,6 @@ These tests help determine how reliably the system distinguishes normal movement
 
 # 🎥 Project Media
 
-## Explanation Video
-
-**Coming soon**
-
-`[ Add YouTube / Google Drive link here ]`
-
-## Demonstration Video
-
-**Coming soon**
-
-`[ Add demonstration video link here ]`
-
 ## Project Presentation
 
 **Coming soon**
@@ -580,48 +479,6 @@ These tests help determine how reliably the system distinguishes normal movement
 
 ---
 
-# 📄 Project Report
-
-The detailed project report is available here:
-
-**[SoloSignal AI Physics Project Report](docs/SoloSignal_AI_Report.pdf)**
-
-The report covers:
-
-- Project idea
-- Objectives
-- Physics concepts
-- AI involvement
-- Development process
-- System architecture
-- Project demonstration
-- Limitations
-- Future scope
-- Conclusion
-
----
-
-# 📁 Suggested Repository Structure
-
-```text
-SoloSignal-AI/
-│
-├── README.md
-│
-├── app/
-│   └── Android application source
-│
-├── docs/
-│   └── SoloSignal_AI_Report.pdf
-│
-├── media/
-│   ├── screenshots/
-│   ├── demo/
-│   └── presentation/
-│
-└── firebase/
-    └── backend configuration
-```
 
 ---
 
@@ -630,9 +487,9 @@ SoloSignal-AI/
 | Field | Details |
 |---|---|
 | Project | SoloSignal AI |
-| Student | Figo Suresh |
-| Class | 11C |
-| Subject | Physics / Computer Science |
+| Student |Alvin B Abhilash, and Figo Suresh |
+
+| Subject | AI / Computer Science |
 | Platform | Android |
 | Language | Kotlin |
 | AI Tool | Google AI Studio |
@@ -653,10 +510,6 @@ The project demonstrates how smartphone sensors, Physics concepts, AI-assisted a
 
 # 📚 References
 
-- CBSE Class 11 Physics
-  - Chapter 2: Motion in a Straight Line
-  - Chapter 3: Motion in a Plane
-  - Chapter 4: Laws of Motion
 - Android Sensor APIs
 - Android permission and background-execution documentation
 - Firebase documentation
@@ -682,7 +535,7 @@ SoloSignal AI explores a simple idea:
 
 > **What if a phone could recognize when something might be wrong and ask for help before it is too late?**
 
-By combining **Physics + Sensors + AI + Mobile Development + Cloud Technology**, this project turns a Class 11 Physics concept into a practical technology prototype.
+
 
 **Built as a student project by Alvin B Abhilash, and Figo Suresh**
 
