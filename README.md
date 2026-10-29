@@ -68,19 +68,3 @@
 - **No Remote Server Configured in Client Build:** To keep OAuth secrets, SMTP credentials, and Google Chat webhook URLs out of the APK, remote Email and Google Chat delivery are intentionally unconfigured in this client-only build.
 
 ---
-
-## 6. Implemented Features vs. Placeholders
-
-### Implemented
-- Complete 6-screen Jetpack Compose UI following the pastel visual specification (`Onboarding`, `Home`, `Possible-Fall Check-In`, `Trusted Contact`, `Activity History`, `Settings & Privacy`).
-- Real `SensorManager` runtime inspection for `Sensor.TYPE_ACCELEROMETER` (plus optional linear acceleration and rotation vector checks) and strict opt-in `SensorEventListener` registration/unregistration.
-- Standalone, unit-tested `CandidateFallDetector` with bounded rolling window, `sqrt(x²+y²+z²)` magnitude, delta magnitude, tilt shift, post-event stillness, single-spike rejection, and 15-second duplicate-alert cooldown.
-- 8-scenario `SyntheticSensorTraces` replay harness for safe testing.
-- Cancelable 20-second check-in countdown with duplicate-alert prevention per event ID.
-- Local event history stored in Room (`EventHistoryDatabase`) with zero fake/seeded data and full deletion control.
-- Persistent contact & preferences storage via Jetpack DataStore (`PreferencesRepository`).
-- Local Android notification channels and foreground service (`MonitoringForegroundService`).
-
-### Placeholders (Next Steps for External Integration)
-- **Remote Email / Google Chat Delivery (`RemoteAlertGateway`):** The client implements `RemoteAlertGateway` and formats the complete `AlertMessagePayload`, but `LocalAndPlaceholderAlertGateway` truthfully reports remote Email/Chat as unavailable. **Next step:** Deploy a Firebase Cloud Function or authenticated HTTPS endpoint that holds the SMTP/Gmail OAuth or Google Chat space webhook credentials on the server, and implement `RemoteAlertGateway.attemptAlertDelivery()` to POST the payload over HTTPS and return `AlertDeliveryResult.ConfirmedRemoteSuccess` only on HTTP 200 confirmation.
-- **Trained Time-Series ML Classifier:** **Next step:** Collect and label multi-device, multi-placement fall and daily-activity datasets, train/validate a LiteRT (TensorFlow Lite) time-series model, and plug it behind the detector interface alongside calibrated sensitivity/false-alarm metrics.
