@@ -1,0 +1,93 @@
+<resources>
+    <string name="app_name">SoloSignal AI</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_contacts">Contacts</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home Screen -->
+    <string name="cd_app_logo">SoloSignal AI safety shield logo</string>
+    <string name="home_subtitle_safety_companion">Personal safety, with a little backup</string>
+    <string name="hero_eyebrow_active">ACTIVE MOTION SCREENING</string>
+    <string name="hero_eyebrow_idle">STANDBY</string>
+    <string name="hero_headline_active">We\'re keeping an eye on your motion</string>
+    <string name="hero_headline_idle">Ready when you want a safety check-in</string>
+    <string name="hero_description_sensor_ready">Screens phone motion patterns for sudden fall impact followed by settling, then gives you a 15-second cancelable check-in before alerting your trusted contact.</string>
+    <string name="hero_description_no_sensor">No hardware accelerometer detected on this device. Use the synthetic motion trace replays below to test the check-in and two-device alert workflow.</string>
+    <string name="action_start_monitoring">Start Monitoring</string>
+    <string name="action_stop_monitoring">Stop Monitoring</string>
+    <string name="home_contact_card_eyebrow">TRUSTED CONTACT</string>
+    <string name="home_contact_not_set">No trusted contact configured</string>
+    <string name="action_add_contact">Add Trusted Contact</string>
+    <string name="action_send_test_alert">Send Test Alert</string>
+    <string name="telemetry_card_eyebrow">LIVE MOTION WINDOW (3.5S)</string>
+    <string name="metric_peak_label">PEAK</string>
+    <string name="metric_min_label">MIN</string>
+    <string name="metric_tilt_label">TILT</string>
+    <string name="metric_stillness_label">STILLNESS σ</string>
+    <string name="replay_card_eyebrow">SAFE VERIFICATION REPLAY</string>
+    <string name="replay_card_title">Synthetic Motion Trace Replays</string>
+    <string name="replay_card_subtitle">Test the multi-stage fall detector and 15s check-in countdown safely without dropping your phone.</string>
+    <string name="safety_not_911_notice">Experimental check-in tool — SoloSignal does not contact 911 or emergency services.</string>
+
+    <!-- Check-in Overlay & Notifications -->
+    <string name="notif_channel_checkin_name">Urgent Fall Check-In Countdown</string>
+    <string name="notif_channel_checkin_desc">High-priority countdown notification when a possible fall is detected</string>
+    <string name="notif_channel_dispatch_name">Emergency Alert Dispatch Status</string>
+    <string name="notif_channel_dispatch_desc">Status updates when an emergency or test alert is sent</string>
+    <string name="checkin_notif_title">Possible fall detected — Are you okay? (%1$ds)</string>
+    <string name="checkin_notif_body">Tap I\'m OK to cancel, or Send SOS Now to alert your emergency contact immediately.</string>
+    <string name="action_im_okay">I\'m OK</string>
+    <string name="action_need_help_now">Send SOS Now</string>
+    <string name="checkin_badge_active">Possible fall detected</string>
+    <string name="checkin_headline">Are you okay?</string>
+    <string name="checkin_subheadline_no_contact">Choose I\'m OK to cancel, or Send SOS Now to send an immediate emergency alert.</string>
+    <string name="checkin_remaining_label">UNTIL AUTO-ALERT</string>
+    <string name="checkin_reason_eyebrow">DETECTED MOTION SEQUENCE</string>
+
+    <!-- Trusted Contacts Screen -->
+    <string name="contacts_headline">Trusted Contact &amp; Verification</string>
+    <string name="field_your_name_label">Your Name (Shown to Recipient)</string>
+    <string name="field_your_name_hint">e.g. Alex Rivera</string>
+    <string name="field_contact_name_label">Trusted Contact Name</string>
+    <string name="field_contact_name_hint">e.g. Jordan Lee</string>
+    <string name="field_contact_email_hint">e.g. jordan@example.com</string>
+    <string name="field_contact_phone_hint">e.g. +1 555-019-2834</string>
+    <string name="field_relationship_eyebrow">RELATIONSHIP</string>
+    <string name="contacts_location_toggle_title">Include GPS Location &amp; Google Maps Link</string>
+    <string name="contacts_location_toggle_subtitle">Attaches your coordinates and an Open in Google Maps link when an emergency alert is sent.</string>
+    <string name="contacts_consent_text">I confirm this person has agreed to receive safety check-in alerts from me.</string>
+    <string name="error_contact_consent_required">Please confirm that your trusted contact has consented to receive alerts.</string>
+    <string name="contacts_channel_section_eyebrow">ALERT DELIVERY CHANNEL</string>
+    <string name="contacts_channel_section_title">How Alerts Are Delivered</string>
+    <string name="contacts_last_payload_eyebrow">LAST DISPATCHED PAYLOAD PREVIEW</string>
+    <string name="google_chat_backend_url_label">Cloud Function Backend URL (HTTPS)</string>
+    <string name="google_chat_space_id_label">Google Chat Space ID (e.g. spaces/AAAABBBB)</string>
+    <string name="google_chat_space_label_input">Space Display Label (Optional)</string>
+    <string name="google_chat_save_connect_cta">Save &amp; Verify Google Chat Space</string>
+
+    <!-- Settings & Privacy Screen -->
+    <string name="settings_eyebrow">SETTINGS, PERMISSIONS &amp; PRIVACY</string>
+    <string name="settings_headline">Safety &amp; Privacy Controls</string>
+    <string name="settings_subtitle">Manage check-in timing, location &amp; notification permissions, and your personal data.</string>
+    <string name="settings_checkin_section_eyebrow">CHECK-IN COUNTDOWN &amp; FEEDBACK</string>
+    <string name="settings_countdown_label">Check-In Countdown Duration</string>
+    <string name="settings_countdown_helper">How long SoloSignal waits for you to tap I\'m OK before sending an emergency alert.</string>
+    <string name="settings_vibration_title">Vibrate During Check-In &amp; Alerts</string>
+    <string name="settings_vibration_subtitle">Vibrates your phone during the 15s check-in and when an incoming emergency alert arrives.</string>
+    <string name="diag_accelerometer_label">Hardware Accelerometer</string>
+    <string name="diag_sensor_present">Available (~50 Hz)</string>
+    <string name="diag_sensor_missing">Not present (use synthetic traces)</string>
+    <string name="privacy_card_eyebrow">PRIVACY &amp; ACCOUNT PROTECTION</string>
+    <string name="privacy_card_title">Zero-Trust Privacy Architecture</string>
+    <string name="privacy_card_bullets">• Raw motion samples stay in a rolling 3.5s memory buffer on your phone and are never uploaded.\n• No public user directory is exposed; trusted contacts are verified via authenticated requests.\n• FCM device tokens are stored in your private subcollection and never exposed to other users.</string>
+    <string name="delete_data_eyebrow">DATA CONTROL</string>
+    <string name="delete_data_title">Delete All Personal Data &amp; Revoke Contacts</string>
+    <string name="delete_data_subtitle">Clears local event history, removes your saved trusted contact, and revokes alert authorization.</string>
+    <string name="action_delete_all_data">Delete All Personal Data</string>
+    <string name="delete_data_confirm_prompt">Are you sure you want to delete all local history, saved contacts, and alert authorizations?</string>
+    <string name="action_confirm_delete">Yes, Delete Everything</string>
+    <string name="action_cancel">Cancel</string>
+</resources>

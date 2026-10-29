@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Network permissions for Firebase Auth, Firestore, FCM, Cloud Functions, and Maps Grounding -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Foreground service, vibration, and high-priority full-screen check-in intent permissions -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- Runtime notification permission for check-in alerts and recipient emergency push alerts on Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Runtime location permissions (requested for emergency alerts & GPS verification) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Runtime camera permission (requested only when scanning another user's emergency contact QR code) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Runtime microphone permission & foreground service type (requested only when user explicitly enables SOS Audio Recording) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+    <!-- Accelerometer hardware feature (not strictly required so devices/emulators without it can still inspect UI) -->
+    <uses-feature
+        android:name="android.hardware.sensor.accelerometer"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.sensor.gyroscope"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MyApplication">
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="solosignal_recipient_emergency_buzzer_v1" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_solosignal_logo" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MyApplication">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".sensor.MonitoringForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse|microphone">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Opt-in experimental motion-sensor screening and 15-second SOS rolling audio buffer while the user explicitly enables SoloSignal monitoring." />
+        </service>
+
+        <service
+            android:name=".alerts.SoloSignalFirebaseMessagingService"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".alerts.CheckInActionReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.solosignal.ACTION_IM_OKAY" />
+                <action android:name="com.example.solosignal.ACTION_SEND_HELP_NOW" />
+                <action android:name="com.example.solosignal.ACTION_YES_SEND_HELP" />
+                <action android:name="com.example.solosignal.ACTION_NO_IM_OKAY" />
+                <action android:name="com.example.solosignal.ACTION_ACKNOWLEDGE_RECIPIENT_ALERT" />
+                <action android:name="com.example.solosignal.ACTION_STOP_MONITORING" />
+                <action android:name="com.example.alerts.ACTION_YES_SEND_HELP" />
+                <action android:name="com.example.alerts.ACTION_NO_IM_OKAY" />
+                <action android:name="com.example.alerts.ACTION_STOP_MONITORING" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>
