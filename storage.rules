@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Default deny for all unspecified paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Protected per-user SOS audio recordings:
+    // Path: sos_audio/{userId}/{alertId}/sos_recording.m4a (or .wav)
+    match /sos_audio/{userId}/{alertId}/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && alertId.size() >= 3
+        && alertId.size() <= 128
+        && (fileName == 'sos_recording.m4a' || fileName == 'sos_recording.wav')
+        && request.resource.size > 0
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('audio/(mp4|m4a|x-m4a|aac|wav|x-wav|wave)');
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

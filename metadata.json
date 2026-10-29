@@ -1,0 +1,8 @@
+{
+  "name": "SoloSignal AI",
+  "description": "An experimental personal-safety app that screens phone motion sensor patterns for possible falls, runs a cancelable 20-second check-in countdown, and manages trusted-contact alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

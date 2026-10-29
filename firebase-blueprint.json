@@ -1,0 +1,474 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user's private profile, device readiness summary, and primary trusted contact configuration.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Normalized lowercase email address of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the user shown in alerts."
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Optional profile photo URL."
+        },
+        "trustedContactName": {
+          "type": "string",
+          "description": "Name of the user's primary trusted contact."
+        },
+        "trustedContactEmail": {
+          "type": "string",
+          "description": "Email address of the primary trusted contact."
+        },
+        "trustedContactPhone": {
+          "type": "string",
+          "description": "Phone number of the primary trusted contact."
+        },
+        "trustedContactRelationship": {
+          "type": "string",
+          "description": "Optional relationship label (e.g. Family, Partner, Friend)."
+        },
+        "trustedContactVerificationStatus": {
+          "type": "string",
+          "enum": [
+            "INVITATION_NEEDED",
+            "INVITATION_PENDING",
+            "REGISTERED",
+            "CONTACT_REQUEST_PENDING",
+            "ACCEPTED",
+            "DEVICE_NOT_REGISTERED",
+            "NOTIFICATIONS_DISABLED",
+            "READY_FOR_ALERTS"
+          ],
+          "description": "Current verification and readiness state of the trusted contact."
+        },
+        "preferredChannel": {
+          "type": "string",
+          "description": "Preferred alert delivery channel."
+        },
+        "shareLocation": {
+          "type": "boolean",
+          "description": "Whether GPS coordinates and Google Maps links are shared in alerts."
+        },
+        "popUpAlertsEnabled": {
+          "type": "boolean",
+          "description": "Whether high-priority phone pop-up alerts are enabled."
+        },
+        "fcmDeviceCount": {
+          "type": "integer",
+          "description": "Number of active FCM devices registered by this user."
+        },
+        "notificationsEnabled": {
+          "type": "boolean",
+          "description": "Whether Android emergency notifications are enabled on this user's registered device."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "email",
+        "displayName",
+        "updatedAt"
+      ]
+    },
+    "RecipientDeviceRegistration": {
+      "title": "RecipientDeviceRegistration",
+      "description": "Private FCM device token registration associated with an authenticated user account. Supports multiple devices per user and is never exposed to other users.",
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "type": "string",
+          "description": "Unique installation/device identifier."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the device owner."
+        },
+        "fcmToken": {
+          "type": "string",
+          "description": "Firebase Cloud Messaging registration token for push delivery."
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "Human-readable device model name."
+        },
+        "notificationsEnabled": {
+          "type": "boolean",
+          "description": "True only when Android POST_NOTIFICATIONS permission and emergency channel are enabled."
+        },
+        "appVersion": {
+          "type": "string",
+          "description": "Installed SoloSignal app version."
+        },
+        "sdkInt": {
+          "type": "integer",
+          "description": "Android API level of the device."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the device registration was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the token or permission status was last refreshed."
+        }
+      },
+      "required": [
+        "deviceId",
+        "userId",
+        "fcmToken",
+        "deviceName",
+        "notificationsEnabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "TrustedContactLink": {
+      "title": "TrustedContactLink",
+      "description": "Privacy-preserving trusted contact invitation, authorization request, and recipient readiness verification record between a sender and a trusted contact.",
+      "type": "object",
+      "properties": {
+        "linkId": {
+          "type": "string",
+          "description": "Deterministic or unique identifier of the trusted-contact link."
+        },
+        "senderUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the sender requesting or inviting the contact."
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Display name of the sender."
+        },
+        "senderEmail": {
+          "type": "string",
+          "description": "Normalized lowercase email address of the sender."
+        },
+        "recipientName": {
+          "type": "string",
+          "description": "Name of the trusted contact."
+        },
+        "recipientEmail": {
+          "type": "string",
+          "description": "Normalized lowercase email address of the trusted contact."
+        },
+        "recipientPhone": {
+          "type": "string",
+          "description": "Optional phone number of the trusted contact."
+        },
+        "relationship": {
+          "type": "string",
+          "description": "Relationship label (e.g. Family, Partner, Friend, Caregiver)."
+        },
+        "recipientUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the recipient once verified or accepted."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "INVITATION_NEEDED",
+            "INVITATION_PENDING",
+            "REGISTERED",
+            "CONTACT_REQUEST_PENDING",
+            "ACCEPTED",
+            "DEVICE_NOT_REGISTERED",
+            "NOTIFICATIONS_DISABLED",
+            "READY_FOR_ALERTS",
+            "REVOKED"
+          ],
+          "description": "Truthful verification and alert readiness status of the trusted contact."
+        },
+        "statusDetail": {
+          "type": "string",
+          "description": "Human-readable explanation of the contact's registration, acceptance, and device notification status."
+        },
+        "recipientHasRegisteredAccount": {
+          "type": "boolean",
+          "description": "True when the recipient has a verified SoloSignal account."
+        },
+        "recipientAccepted": {
+          "type": "boolean",
+          "description": "True when the recipient has explicitly accepted the trusted-contact request."
+        },
+        "recipientRegisteredDeviceCount": {
+          "type": "integer",
+          "description": "Number of FCM-registered devices on the recipient's account (does not expose device tokens)."
+        },
+        "recipientNotificationsEnabled": {
+          "type": "boolean",
+          "description": "True when at least one registered recipient device has Android notification permission enabled."
+        },
+        "shareLocation": {
+          "type": "boolean",
+          "description": "Whether the sender shares GPS location with this contact during emergencies."
+        },
+        "popUpAlertsEnabled": {
+          "type": "boolean",
+          "description": "Whether high-priority pop-up alerts are enabled for this contact."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the link was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the link was last updated."
+        }
+      },
+      "required": [
+        "senderUid",
+        "senderName",
+        "senderEmail",
+        "recipientName",
+        "recipientEmail",
+        "relationship",
+        "status",
+        "statusDetail",
+        "recipientHasRegisteredAccount",
+        "recipientAccepted",
+        "recipientRegisteredDeviceCount",
+        "recipientNotificationsEnabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "EmergencyAlert": {
+      "title": "EmergencyAlert",
+      "description": "Real-time possible-fall or test alert dispatched from a sender to an authorized trusted contact with FCM push delivery, email delivery tracking, and recipient phone pop-up support.",
+      "type": "object",
+      "properties": {
+        "alertId": {
+          "type": "string",
+          "description": "Optional explicit alert identifier."
+        },
+        "senderUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the sender who triggered the alert."
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Display name of the sender."
+        },
+        "senderEmail": {
+          "type": "string",
+          "description": "Normalized email of the sender."
+        },
+        "recipientName": {
+          "type": "string",
+          "description": "Display name of the trusted contact recipient."
+        },
+        "recipientEmail": {
+          "type": "string",
+          "description": "Normalized lowercase email address of the trusted contact recipient."
+        },
+        "recipientPhone": {
+          "type": "string",
+          "description": "Optional phone number of the recipient."
+        },
+        "recipientUid": {
+          "type": "string",
+          "description": "Optional Firebase Auth UID of the recipient once verified or delivered."
+        },
+        "linkId": {
+          "type": "string",
+          "description": "Optional TrustedContactLink ID authorizing this alert."
+        },
+        "isTestAlert": {
+          "type": "boolean",
+          "description": "True if this is an explicit non-emergency test alert."
+        },
+        "subjectLine": {
+          "type": "string",
+          "description": "Alert headline or email subject line."
+        },
+        "bodyText": {
+          "type": "string",
+          "description": "Full formatted alert message body including timestamp and location."
+        },
+        "triggerReason": {
+          "type": "string",
+          "description": "Why the alert was triggered (countdown expired, manual help button, or test)."
+        },
+        "deliveryState": {
+          "type": "string",
+          "enum": [
+            "SENDING",
+            "REQUEST_ACCEPTED",
+            "EMAIL_SENT",
+            "EMAIL_FAILED",
+            "SENT_BY_PROVIDER",
+            "DELIVERED_TO_RECIPIENT",
+            "ACKNOWLEDGED_BY_RECIPIENT",
+            "ESCALATED_VIDEO_CALL",
+            "CANCELLED",
+            "FAILED"
+          ],
+          "description": "Truthful end-to-end delivery state."
+        },
+        "deliveryStatusDetail": {
+          "type": "string",
+          "description": "Human-readable explanation of the current delivery status or error."
+        },
+        "providerMessageId": {
+          "type": "string",
+          "description": "Actual FCM/email/messaging provider message ID or Firestore delivery receipt ID."
+        },
+        "fcmDeliveryStatus": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "SENT",
+            "DELIVERED",
+            "FAILED",
+            "NO_REGISTERED_DEVICE"
+          ],
+          "description": "Status of FCM push notification dispatch to recipient devices."
+        },
+        "fcmDeliveredCount": {
+          "type": "integer",
+          "description": "Number of recipient devices that received the FCM push notification."
+        },
+        "emailDeliveryStatus": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "SENDING_EMAIL",
+            "SENT",
+            "EMAIL_SENT",
+            "EMAIL_FAILED"
+          ],
+          "description": "Status of the transactional email dispatch to recipientEmail."
+        },
+        "emailProvider": {
+          "type": "string",
+          "description": "Name of the Google email delivery service used."
+        },
+        "emailProviderMessageId": {
+          "type": "string",
+          "description": "Verified message ID returned by the email provider."
+        },
+        "emailError": {
+          "type": "string",
+          "description": "Exact error returned if email delivery failed."
+        },
+        "channelUsed": {
+          "type": "string",
+          "description": "Delivery channel used (e.g. EMAIL, SOLOSIGNAL_POPUP, GOOGLE_CHAT)."
+        },
+        "escalationStatus": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "WAITING_FOR_ACK",
+            "CANCELLED_BY_ACK",
+            "CANCELLED_BY_USER",
+            "MEET_TRIGGERING",
+            "MEET_CREATED",
+            "MEET_FAILED"
+          ],
+          "description": "Server-side 15-second acknowledgement timeout and Google Meet video-call fallback state."
+        },
+        "escalationDeadlineMillis": {
+          "type": "integer",
+          "description": "Epoch milliseconds when the 15-second acknowledgement window expires."
+        },
+        "meetUrl": {
+          "type": "string",
+          "description": "Google Meet meeting URI created when the trusted contact does not acknowledge within 15 seconds."
+        },
+        "meetSpaceName": {
+          "type": "string",
+          "description": "Google Meet API space resource name (e.g. spaces/xxxx)."
+        },
+        "meetError": {
+          "type": "string",
+          "description": "Exact error message if Google Meet space creation failed."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Optional GPS latitude."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Optional GPS longitude."
+        },
+        "googleMapsUrl": {
+          "type": "string",
+          "description": "Optional clickable Google Maps URL for the sender's location."
+        },
+        "locationSummary": {
+          "type": "string",
+          "description": "Formatted location coordinates or reason location was unavailable."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the alert was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the alert was last updated."
+        }
+      },
+      "required": [
+        "senderUid",
+        "senderName",
+        "senderEmail",
+        "recipientName",
+        "recipientEmail",
+        "isTestAlert",
+        "subjectLine",
+        "bodyText",
+        "triggerReason",
+        "deliveryState",
+        "deliveryStatusDetail",
+        "locationSummary",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Per-user private profile and trusted contact settings."
+    },
+    "/users/{userId}/devices/{deviceId}": {
+      "schema": "RecipientDeviceRegistration",
+      "description": "Private FCM device token registrations for the authenticated user."
+    },
+    "/trusted_contact_links/{linkId}": {
+      "schema": "TrustedContactLink",
+      "description": "Privacy-preserving trusted contact invitations, authorization requests, and recipient readiness state."
+    },
+    "/emergency_alerts/{alertId}": {
+      "schema": "EmergencyAlert",
+      "description": "End-to-end emergency and test alerts with FCM push status, email provider status, and recipient pop-up notification triggers."
+    }
+  }
+}

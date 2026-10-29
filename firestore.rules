@@ -1,0 +1,603 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidDeliveryState(state) {
+      return state in [
+        'SENDING',
+        'REQUEST_ACCEPTED',
+        'EMAIL_SENT',
+        'EMAIL_FAILED',
+        'SENT_BY_PROVIDER',
+        'DELIVERED_TO_RECIPIENT',
+        'ACKNOWLEDGED_BY_RECIPIENT',
+        'ESCALATED_VIDEO_CALL',
+        'CANCELLED',
+        'FAILED'
+      ];
+    }
+
+    function isValidEscalationStatus(status) {
+      return status in [
+        'NONE',
+        'WAITING_FOR_ACK',
+        'CANCELLED_BY_ACK',
+        'CANCELLED_BY_USER',
+        'MEET_TRIGGERING',
+        'MEET_CREATED',
+        'MEET_FAILED'
+      ];
+    }
+
+    function isValidEmailDeliveryStatus(status) {
+      return status in [
+        'PENDING',
+        'SENDING_EMAIL',
+        'SENT',
+        'EMAIL_SENT',
+        'EMAIL_FAILED'
+      ];
+    }
+
+    function isValidAudioStatus(status) {
+      return status in [
+        'DISABLED',
+        'AUDIO_MONITORING_ENABLED',
+        'MICROPHONE_PERMISSION_REQUIRED',
+        'AUDIO_MONITORING_UNAVAILABLE',
+        'SOS_AUDIO_CAPTURED',
+        'UPLOAD_IN_PROGRESS',
+        'AUDIO_UPLOAD_FAILED',
+        'SOS_EMAIL_SENT',
+        'SOS_EMAIL_FAILED',
+        'UPLOADED',
+        'NOT_AVAILABLE'
+      ];
+    }
+
+    function isValidFcmDeliveryStatus(status) {
+      return status in [
+        'PENDING',
+        'SENT',
+        'DELIVERED',
+        'FAILED',
+        'NO_REGISTERED_DEVICE'
+      ];
+    }
+
+    function isValidContactLinkStatus(status) {
+      return status in [
+        'INVITATION_NEEDED',
+        'INVITATION_PENDING',
+        'REGISTERED',
+        'CONTACT_REQUEST_PENDING',
+        'ACCEPTED',
+        'DEVICE_NOT_REGISTERED',
+        'NOTIFICATIONS_DISABLED',
+        'READY_FOR_ALERTS',
+        'REVOKED'
+      ];
+    }
+
+    // Validation Blueprint: UserProfile
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userId == request.auth.uid &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 254 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1024)) &&
+             (!('trustedContactName' in data) || data.trustedContactName == null || (data.trustedContactName is string && data.trustedContactName.size() <= 120)) &&
+             (!('trustedContactEmail' in data) || data.trustedContactEmail == null || (data.trustedContactEmail is string && data.trustedContactEmail.size() <= 254)) &&
+             (!('trustedContactPhone' in data) || data.trustedContactPhone == null || (data.trustedContactPhone is string && data.trustedContactPhone.size() <= 40)) &&
+             (!('trustedContactRelationship' in data) || data.trustedContactRelationship == null || (data.trustedContactRelationship is string && data.trustedContactRelationship.size() <= 60)) &&
+             (!('trustedContactVerificationStatus' in data) || data.trustedContactVerificationStatus == null || isValidContactLinkStatus(data.trustedContactVerificationStatus)) &&
+             (!('preferredChannel' in data) || data.preferredChannel == null || (data.preferredChannel is string && data.preferredChannel.size() <= 60)) &&
+             (!('shareLocation' in data) || data.shareLocation == null || data.shareLocation is bool) &&
+             (!('popUpAlertsEnabled' in data) || data.popUpAlertsEnabled == null || data.popUpAlertsEnabled is bool) &&
+             (!('sosAudioEnabled' in data) || data.sosAudioEnabled == null || data.sosAudioEnabled is bool) &&
+             (!('sosAudioConsentGranted' in data) || data.sosAudioConsentGranted == null || data.sosAudioConsentGranted is bool) &&
+             (!('sosAudioRetentionDays' in data) || data.sosAudioRetentionDays == null || (data.sosAudioRetentionDays is int && data.sosAudioRetentionDays >= 1 && data.sosAudioRetentionDays <= 365)) &&
+             (!('confirmationTimeoutSeconds' in data) || data.confirmationTimeoutSeconds == null || (data.confirmationTimeoutSeconds is int && data.confirmationTimeoutSeconds >= 10 && data.confirmationTimeoutSeconds <= 60)) &&
+             (!('fcmDeviceCount' in data) || data.fcmDeviceCount == null || (data.fcmDeviceCount is int && data.fcmDeviceCount >= 0 && data.fcmDeviceCount <= 50)) &&
+             (!('notificationsEnabled' in data) || data.notificationsEnabled == null || data.notificationsEnabled is bool) &&
+             (!('createdAt' in data) || data.createdAt == null || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // Validation Blueprint: RecipientDeviceRegistration
+    function isValidDeviceRegistration(data) {
+      return data.deviceId is string && isValidId(data.deviceId) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.fcmToken is string && data.fcmToken.size() >= 10 && data.fcmToken.size() <= 4096 &&
+             data.deviceName is string && data.deviceName.size() >= 1 && data.deviceName.size() <= 120 &&
+             data.notificationsEnabled is bool &&
+             (!('appVersion' in data) || data.appVersion == null || (data.appVersion is string && data.appVersion.size() <= 40)) &&
+             (!('sdkInt' in data) || data.sdkInt == null || (data.sdkInt is int && data.sdkInt >= 21 && data.sdkInt <= 60)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // Validation Blueprint: TrustedContactLink
+    function isValidTrustedContactLink(data) {
+      return data.senderUid is string && isValidId(data.senderUid) &&
+             data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 120 &&
+             data.senderEmail is string && data.senderEmail.size() >= 3 && data.senderEmail.size() <= 254 &&
+             data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 120 &&
+             data.recipientEmail is string && data.recipientEmail.size() >= 3 && data.recipientEmail.size() <= 254 &&
+             (!('linkId' in data) || data.linkId == null || (data.linkId is string && data.linkId.size() <= 160)) &&
+             (!('recipientPhone' in data) || data.recipientPhone == null || (data.recipientPhone is string && data.recipientPhone.size() <= 40)) &&
+             data.relationship is string && data.relationship.size() >= 1 && data.relationship.size() <= 60 &&
+             (!('recipientUid' in data) || data.recipientUid == null || (data.recipientUid is string && data.recipientUid.size() <= 128)) &&
+             data.status is string && isValidContactLinkStatus(data.status) &&
+             data.statusDetail is string && data.statusDetail.size() >= 1 && data.statusDetail.size() <= 600 &&
+             data.recipientHasRegisteredAccount is bool &&
+             data.recipientAccepted is bool &&
+             data.recipientRegisteredDeviceCount is int && data.recipientRegisteredDeviceCount >= 0 && data.recipientRegisteredDeviceCount <= 50 &&
+             data.recipientNotificationsEnabled is bool &&
+             (!('shareLocation' in data) || data.shareLocation == null || data.shareLocation is bool) &&
+             (!('popUpAlertsEnabled' in data) || data.popUpAlertsEnabled == null || data.popUpAlertsEnabled is bool) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // Validation Blueprint: EmergencyAlert
+    function isValidEmergencyAlert(data) {
+      return data.senderUid is string && isValidId(data.senderUid) &&
+             data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 120 &&
+             data.senderEmail is string && data.senderEmail.size() >= 3 && data.senderEmail.size() <= 254 &&
+             data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 120 &&
+             data.recipientEmail is string && data.recipientEmail.size() >= 3 && data.recipientEmail.size() <= 254 &&
+             (!('alertId' in data) || data.alertId == null || (data.alertId is string && data.alertId.size() <= 128)) &&
+             (!('recipientPhone' in data) || data.recipientPhone == null || (data.recipientPhone is string && data.recipientPhone.size() <= 40)) &&
+             (!('recipientUid' in data) || data.recipientUid == null || (data.recipientUid is string && data.recipientUid.size() <= 128)) &&
+             (!('linkId' in data) || data.linkId == null || (data.linkId is string && data.linkId.size() <= 160)) &&
+             data.isTestAlert is bool &&
+             data.subjectLine is string && data.subjectLine.size() >= 1 && data.subjectLine.size() <= 300 &&
+             data.bodyText is string && data.bodyText.size() >= 1 && data.bodyText.size() <= 4000 &&
+             data.triggerReason is string && data.triggerReason.size() >= 1 && data.triggerReason.size() <= 500 &&
+             data.deliveryState is string && isValidDeliveryState(data.deliveryState) &&
+             data.deliveryStatusDetail is string && data.deliveryStatusDetail.size() >= 1 && data.deliveryStatusDetail.size() <= 600 &&
+             (!('providerMessageId' in data) || data.providerMessageId == null || (data.providerMessageId is string && data.providerMessageId.size() <= 300)) &&
+             (!('fcmDeliveryStatus' in data) || data.fcmDeliveryStatus == null || isValidFcmDeliveryStatus(data.fcmDeliveryStatus)) &&
+             (!('fcmDeliveredCount' in data) || data.fcmDeliveredCount == null || (data.fcmDeliveredCount is int && data.fcmDeliveredCount >= 0 && data.fcmDeliveredCount <= 50)) &&
+             (!('emailDeliveryStatus' in data) || data.emailDeliveryStatus == null || (data.emailDeliveryStatus is string && isValidEmailDeliveryStatus(data.emailDeliveryStatus))) &&
+             (!('emailProvider' in data) || data.emailProvider == null || (data.emailProvider is string && data.emailProvider.size() <= 80)) &&
+             (!('emailProviderMessageId' in data) || data.emailProviderMessageId == null || (data.emailProviderMessageId is string && data.emailProviderMessageId.size() <= 300)) &&
+             (!('emailError' in data) || data.emailError == null || (data.emailError is string && data.emailError.size() <= 600)) &&
+             (!('channelUsed' in data) || data.channelUsed == null || (data.channelUsed is string && data.channelUsed.size() >= 1 && data.channelUsed.size() <= 80)) &&
+             (!('latitude' in data) || data.latitude == null || data.latitude is int || data.latitude is float) &&
+             (!('longitude' in data) || data.longitude == null || data.longitude is int || data.longitude is float) &&
+             (!('googleMapsUrl' in data) || data.googleMapsUrl == null || (data.googleMapsUrl is string && data.googleMapsUrl.size() <= 500)) &&
+             (!('escalationStatus' in data) || data.escalationStatus == null || (data.escalationStatus is string && isValidEscalationStatus(data.escalationStatus))) &&
+             (!('escalationDeadlineMillis' in data) || data.escalationDeadlineMillis == null || (data.escalationDeadlineMillis is int && data.escalationDeadlineMillis >= 0)) &&
+             (!('meetUrl' in data) || data.meetUrl == null || (data.meetUrl is string && data.meetUrl.size() <= 500)) &&
+             (!('meetSpaceName' in data) || data.meetSpaceName == null || (data.meetSpaceName is string && data.meetSpaceName.size() <= 200)) &&
+             (!('meetError' in data) || data.meetError == null || (data.meetError is string && data.meetError.size() <= 600)) &&
+             (!('triggeredAt' in data) || data.triggeredAt == null || (data.triggeredAt is timestamp && data.triggeredAt <= request.time)) &&
+             (!('audioStatus' in data) || data.audioStatus == null || (data.audioStatus is string && isValidAudioStatus(data.audioStatus))) &&
+             (!('audioDurationSeconds' in data) || data.audioDurationSeconds == null || ((data.audioDurationSeconds is int || data.audioDurationSeconds is float) && data.audioDurationSeconds >= 0 && data.audioDurationSeconds <= 60)) &&
+             (!('storageObjectPath' in data) || data.storageObjectPath == null || (data.storageObjectPath is string && data.storageObjectPath.size() <= 300)) &&
+             (!('audioDownloadUrl' in data) || data.audioDownloadUrl == null || (data.audioDownloadUrl is string && data.audioDownloadUrl.size() <= 1024)) &&
+             (!('emailStatus' in data) || data.emailStatus == null || (data.emailStatus is string && isValidEmailDeliveryStatus(data.emailStatus))) &&
+             (!('emailSentAt' in data) || data.emailSentAt == null || (data.emailSentAt is timestamp && data.emailSentAt <= request.time)) &&
+             (!('failureReason' in data) || data.failureReason == null || (data.failureReason is string && data.failureReason.size() <= 600)) &&
+             data.locationSummary is string && data.locationSummary.size() >= 1 && data.locationSummary.size() <= 500 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function hasMatchingTokenEmail(targetEmail) {
+      return request.auth.token.email is string &&
+             targetEmail is string &&
+             targetEmail.lower() == request.auth.token.email.lower();
+    }
+
+    function isValidRegisteredContact(data) {
+      return data.emailKey is string && isValidId(data.emailKey) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 254 &&
+             hasMatchingTokenEmail(data.email) &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+             data.hasRegisteredAccount is bool &&
+             data.activeDeviceCount is int && data.activeDeviceCount >= 0 && data.activeDeviceCount <= 50 &&
+             data.notificationsEnabled is bool &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isAlertParticipant(docData) {
+      return docData.senderUid == request.auth.uid ||
+             ('recipientUid' in docData && docData.recipientUid == request.auth.uid) ||
+             hasMatchingTokenEmail(docData.recipientEmail);
+    }
+
+    function isContactLinkParticipant(docData) {
+      return docData.senderUid == request.auth.uid ||
+             ('recipientUid' in docData && docData.recipientUid == request.auth.uid) ||
+             hasMatchingTokenEmail(docData.recipientEmail);
+    }
+
+    // 0. Privacy-Preserving Exact-Email Registration Lookup (get only, list forbidden)
+    match /registered_contacts/{emailKey} {
+      allow get: if isSignedIn() && isValidId(emailKey);
+      allow list: if false;
+
+      allow create, update: if isSignedIn() &&
+                               isValidId(emailKey) &&
+                               incoming().emailKey == emailKey &&
+                               incoming().keys().hasAll([
+                                 'emailKey',
+                                 'userId',
+                                 'email',
+                                 'displayName',
+                                 'hasRegisteredAccount',
+                                 'activeDeviceCount',
+                                 'notificationsEnabled',
+                                 'updatedAt'
+                               ]) &&
+                               incoming().keys().hasOnly([
+                                 'emailKey',
+                                 'userId',
+                                 'email',
+                                 'displayName',
+                                 'hasRegisteredAccount',
+                                 'activeDeviceCount',
+                                 'notificationsEnabled',
+                                 'updatedAt'
+                               ]) &&
+                               isValidRegisteredContact(incoming());
+
+      allow delete: if isSignedIn() && isValidId(emailKey) && (resource == null || existing().userId == request.auth.uid);
+    }
+
+    // 1. User Profiles (Private to owner — no public user directory)
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll(['userId', 'email', 'displayName', 'updatedAt']) &&
+                       incoming().keys().hasOnly([
+                         'userId',
+                         'email',
+                         'displayName',
+                         'photoUrl',
+                         'trustedContactName',
+                         'trustedContactEmail',
+                         'trustedContactPhone',
+                         'trustedContactRelationship',
+                         'trustedContactVerificationStatus',
+                         'preferredChannel',
+                         'shareLocation',
+                         'popUpAlertsEnabled',
+                         'sosAudioEnabled',
+                         'sosAudioConsentGranted',
+                         'sosAudioRetentionDays',
+                         'confirmationTimeoutSeconds',
+                         'fcmDeviceCount',
+                         'notificationsEnabled',
+                         'createdAt',
+                         'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'email',
+                         'displayName',
+                         'photoUrl',
+                         'trustedContactName',
+                         'trustedContactEmail',
+                         'trustedContactPhone',
+                         'trustedContactRelationship',
+                         'trustedContactVerificationStatus',
+                         'preferredChannel',
+                         'shareLocation',
+                         'popUpAlertsEnabled',
+                         'sosAudioEnabled',
+                         'sosAudioConsentGranted',
+                         'sosAudioRetentionDays',
+                         'confirmationTimeoutSeconds',
+                         'fcmDeviceCount',
+                         'notificationsEnabled',
+                         'createdAt',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      // 1b. Private Recipient Device FCM Token Registrations (Never exposed to other users)
+      match /devices/{deviceId} {
+        allow get, list: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(deviceId) &&
+                         request.auth.uid == userId &&
+                         incoming().deviceId == deviceId &&
+                         incoming().keys().hasAll([
+                           'deviceId',
+                           'userId',
+                           'fcmToken',
+                           'deviceName',
+                           'notificationsEnabled',
+                           'createdAt',
+                           'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'deviceId',
+                           'userId',
+                           'fcmToken',
+                           'deviceName',
+                           'notificationsEnabled',
+                           'appVersion',
+                           'sdkInt',
+                           'createdAt',
+                           'updatedAt'
+                         ]) &&
+                         isValidDeviceRegistration(incoming());
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(deviceId) &&
+                         request.auth.uid == userId &&
+                         incoming().deviceId == existing().deviceId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidDeviceRegistration(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'fcmToken',
+                           'deviceName',
+                           'notificationsEnabled',
+                           'appVersion',
+                           'sdkInt',
+                           'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(deviceId) && request.auth.uid == userId;
+      }
+    }
+
+    // 2. Trusted Contact Verification & Authorization Links
+    match /trusted_contact_links/{linkId} {
+      allow get: if isSignedIn() && isValidId(linkId) && (resource == null || isContactLinkParticipant(existing()));
+      allow list: if isSignedIn() && isContactLinkParticipant(existing());
+
+      allow create: if isSignedIn() &&
+                       isValidId(linkId) &&
+                       incoming().senderUid == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'senderUid',
+                         'senderName',
+                         'senderEmail',
+                         'recipientName',
+                         'recipientEmail',
+                         'relationship',
+                         'status',
+                         'statusDetail',
+                         'recipientHasRegisteredAccount',
+                         'recipientAccepted',
+                         'recipientRegisteredDeviceCount',
+                         'recipientNotificationsEnabled',
+                         'createdAt',
+                         'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'linkId',
+                         'senderUid',
+                         'senderName',
+                         'senderEmail',
+                         'recipientName',
+                         'recipientEmail',
+                         'recipientPhone',
+                         'relationship',
+                         'recipientUid',
+                         'status',
+                         'statusDetail',
+                         'recipientHasRegisteredAccount',
+                         'recipientAccepted',
+                         'recipientRegisteredDeviceCount',
+                         'recipientNotificationsEnabled',
+                         'shareLocation',
+                         'popUpAlertsEnabled',
+                         'createdAt',
+                         'updatedAt'
+                       ]) &&
+                       isValidTrustedContactLink(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(linkId) &&
+                       isValidTrustedContactLink(incoming()) &&
+                       isContactLinkParticipant(existing()) &&
+                       incoming().senderUid == existing().senderUid &&
+                       incoming().recipientEmail == existing().recipientEmail &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Sender updating contact details, invitation status, or revoking
+                         (existing().senderUid == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'senderName',
+                            'recipientName',
+                            'recipientPhone',
+                            'relationship',
+                            'recipientUid',
+                            'status',
+                            'statusDetail',
+                            'recipientHasRegisteredAccount',
+                            'recipientAccepted',
+                            'recipientRegisteredDeviceCount',
+                            'recipientNotificationsEnabled',
+                            'shareLocation',
+                            'popUpAlertsEnabled',
+                            'updatedAt'
+                          ])) ||
+                         // Recipient accepting/declining request or updating their device/notification readiness
+                         (isContactLinkParticipant(existing()) &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'recipientUid',
+                            'status',
+                            'statusDetail',
+                            'recipientHasRegisteredAccount',
+                            'recipientAccepted',
+                            'recipientRegisteredDeviceCount',
+                            'recipientNotificationsEnabled',
+                            'updatedAt'
+                          ]))
+                       );
+
+      allow delete: if isSignedIn() && isValidId(linkId) && isContactLinkParticipant(existing());
+    }
+
+    // 3. End-to-End Emergency & Test Alerts (Immutable audit history: delete forbidden)
+    match /emergency_alerts/{alertId} {
+      allow get: if isSignedIn() && isValidId(alertId) && (resource == null || isAlertParticipant(existing()));
+      allow list: if isSignedIn() && isAlertParticipant(existing());
+
+      allow create: if isSignedIn() &&
+                       isValidId(alertId) &&
+                       incoming().senderUid == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'senderUid',
+                         'senderName',
+                         'senderEmail',
+                         'recipientName',
+                         'recipientEmail',
+                         'isTestAlert',
+                         'subjectLine',
+                         'bodyText',
+                         'triggerReason',
+                         'deliveryState',
+                         'deliveryStatusDetail',
+                         'locationSummary',
+                         'createdAt',
+                         'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'alertId',
+                         'senderUid',
+                         'senderName',
+                         'senderEmail',
+                         'recipientName',
+                         'recipientEmail',
+                         'recipientPhone',
+                         'recipientUid',
+                         'linkId',
+                         'isTestAlert',
+                         'subjectLine',
+                         'bodyText',
+                         'triggerReason',
+                         'deliveryState',
+                         'deliveryStatusDetail',
+                         'providerMessageId',
+                         'fcmDeliveryStatus',
+                         'fcmDeliveredCount',
+                         'emailDeliveryStatus',
+                         'emailProvider',
+                         'emailProviderMessageId',
+                         'emailError',
+                         'channelUsed',
+                         'latitude',
+                         'longitude',
+                         'googleMapsUrl',
+                         'escalationStatus',
+                         'escalationDeadlineMillis',
+                         'meetUrl',
+                         'meetSpaceName',
+                         'meetError',
+                         'triggeredAt',
+                         'audioStatus',
+                         'audioDurationSeconds',
+                         'storageObjectPath',
+                         'audioDownloadUrl',
+                         'emailStatus',
+                         'emailSentAt',
+                         'failureReason',
+                         'locationSummary',
+                         'createdAt',
+                         'updatedAt'
+                       ]) &&
+                       isValidEmergencyAlert(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(alertId) &&
+                       isValidEmergencyAlert(incoming()) &&
+                       isAlertParticipant(existing()) &&
+                       existing().deliveryState != 'ACKNOWLEDGED_BY_RECIPIENT' &&
+                       incoming().senderUid == existing().senderUid &&
+                       incoming().recipientEmail == existing().recipientEmail &&
+                       incoming().isTestAlert == existing().isTestAlert &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action 1: Sender updates email / provider / FCM status / receipt / escalation state
+                         (existing().senderUid == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'bodyText',
+                            'deliveryState',
+                            'deliveryStatusDetail',
+                            'providerMessageId',
+                            'fcmDeliveryStatus',
+                            'fcmDeliveredCount',
+                            'emailDeliveryStatus',
+                            'emailProvider',
+                            'emailProviderMessageId',
+                            'emailError',
+                            'channelUsed',
+                            'escalationStatus',
+                            'escalationDeadlineMillis',
+                            'meetUrl',
+                            'meetSpaceName',
+                            'meetError',
+                            'audioStatus',
+                            'audioDurationSeconds',
+                            'storageObjectPath',
+                            'audioDownloadUrl',
+                            'emailStatus',
+                            'emailSentAt',
+                            'failureReason',
+                            'updatedAt'
+                          ])) ||
+                         // Action 2: Recipient device confirms pop-up delivery or acknowledges alert (cancelling escalation)
+                         (isAlertParticipant(existing()) &&
+                          incoming().deliveryState in ['DELIVERED_TO_RECIPIENT', 'ACKNOWLEDGED_BY_RECIPIENT'] &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'deliveryState',
+                            'deliveryStatusDetail',
+                            'recipientUid',
+                            'fcmDeliveryStatus',
+                            'escalationStatus',
+                            'updatedAt'
+                          ]))
+                       );
+
+      allow delete: if false;
+    }
+  }
+}

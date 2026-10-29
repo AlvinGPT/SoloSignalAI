@@ -1,540 +1,86 @@
-# SoloSignal AI 🚨
+# SoloSignal AI — Experimental Personal-Safety Android App
 
-### AI-Powered Personal Safety System Using Smartphone Motion Sensors
-
-**Created By:** Figo Suresh and Alvin B Abhilash 
-**Project:** AI / Computer Science Project  
-**Project Type:** Prototype / Academic Project
+> **Important Safety Disclaimer:** SoloSignal AI is an experimental engineering prototype that screens phone motion sensor patterns for possible falls and runs a cancelable check-in countdown. **It is NOT a certified medical device and never guarantees fall detection, safety, or emergency alert delivery.** False positives (e.g., dropping the phone) and missed falls are possible.
 
 ---
 
-## 📌 About the Project
+## 1. Overview & Architecture
 
-**SoloSignal AI** is an AI-assisted personal safety app concept designed to help people who may be alone and unable to call for help after a possible fall.
+**SoloSignal AI** is built natively for Android using **Kotlin**, **Jetpack Compose (Material 3)**, **Android SDK Sensor APIs** (`SensorManager`, `SensorEventListener`), **Room**, and **Jetpack DataStore**.
 
-The system uses smartphone motion sensors such as the **accelerometer** to monitor movement. When an unusual movement pattern is detected, the app can ask the user:
-
-> **“Are you okay?”**
-
-If the user does not respond within the given time, the system can trigger an **SOS alert** and notify a trusted emergency contact.
-
-The project combines **Class 11 Physics concepts, smartphone sensors, AI-based pattern analysis, Android development, and Firebase services** into one practical safety-focused application.
-
----
-
-## 🎯 Objectives
-
-The main objectives of SoloSignal AI are:
-
-- To explore how smartphone sensors can detect sudden changes in movement.
-- To understand how acceleration and motion can be used to identify possible falls.
-- To use AI to analyze movement patterns rather than relying only on a single sensor reading.
-- To provide an **“I’m Okay”** confirmation system after a possible fall.
-- To explore automatic SOS notifications to a trusted contact.
-
+### Source Organization
+- `com.example.domain.Models.kt` — Domain models (`MotionSample`, `MotionFeatures`, `CandidateEventSummary`, `TrustedContact`), confirmation state machine (`MonitoringState`), and delivery status enums (`DeliveryConfigStatus`).
+- `com.example.sensor.CandidateFallDetector.kt` — Deterministic, testable heuristic candidate-event detector using a bounded rolling ring buffer (`ArrayDeque`), monotonic nanosecond timestamps, vector magnitude `sqrt(x*x + y*y + z*z)`, sample-to-sample `deltaMagnitude`, 3D orientation/tilt shift estimation, post-impact stillness verification, and a 15-second cooldown/re-arm period.
+- `com.example.sensor.SyntheticSensorTraces.kt` — 8 prerecorded/synthetic motion trace scenarios (`Staged Possible Fall`, `Phone Dropped on Floor`, `Normal Walking`, `Sitting Down Quickly`, `Lying Down Intentionally`, `Jumping / Active Exercise`, `Single Isolated Peak`, `Orientation Change Without Fall`) so the detector and check-in workflow can be tested safely without anyone performing a fall.
+- `com.example.sensor.SensorMonitorManager.kt` & `MonitoringForegroundService.kt` — Runtime hardware availability checks (`Sensor.TYPE_ACCELEROMETER`, optional `TYPE_LINEAR_ACCELERATION` / `TYPE_ROTATION_VECTOR`), strict opt-in listener registration/unregistration, and foreground service persistent notification.
+- `com.example.data.EventHistoryDatabase.kt` & `PreferencesRepository.kt` — Room database for actual recorded events (never seeded with fake data) and DataStore for trusted contact configuration and countdown settings.
+- `com.example.alerts.AlertDeliveryGateway.kt` — Clean `RemoteAlertGateway` interface for a future server-side messaging backend, paired with `LocalNotificationHelper` for local check-in prompts and clearly labelled `"TEST — not an emergency"` notifications.
+- `com.example.ui.*` — Jetpack Compose screens (`OnboardingScreen`, `HomeScreen`, `PossibleFallCheckInCard`, `TrustedContactScreen`, `ActivityHistoryScreen`, `SettingsPrivacyScreen`) styled after the pastel reference aesthetic.
 
 ---
 
-## 💡 Core Idea
+## 2. Setup & Build Instructions
 
-```text
-       📱 Smartphone Sensors
-              │
-              ▼
-      Movement Data Collected
-              │
-              ▼
-        🤖 AI Analysis
-              │
-       Possible Fall?
-          /         \
-        NO           YES
-        │             │
-        ▼             ▼
-   Continue      "Are You Okay?"
-   Monitoring        │
-                     │
-              ┌──────┴──────┐
-              │             │
-           YES            NO RESPONSE
-              │             │
-              ▼             ▼
-         Cancel SOS      🚨 SOS ALERT
-                            │
-                            ▼
-                    Trusted Contact
-```
+1. Open the project in Android Studio or build via Gradle CLI (`compileSdk = 36`, `minSdk = 24`).
+2. Assemble the debug APK:
+   ```bash
+   gradle assembleDebug
+   ```
+3. Run the unit and Robolectric test suites:
+   ```bash
+   gradle :app:testDebugUnitTest
+   ```
+4. No external API keys, OAuth secrets, Gmail credentials, or Google Chat webhook URLs are embedded in client code or required to build and test the local prototype.
 
 ---
 
-# 🤖 AI Involvement & Disclosure
+## 3. Permissions & Privacy
 
-Artificial intelligence was used as part of the development and research process of **SoloSignal AI**.
-
-AI-assisted tools were used for:
-
-- Developing and refining the project idea.
-- Exploring technical approaches for smartphone sensor processing.
-- Planning the application architecture.
-- Assisting with code generation and debugging.
-- Designing the AI-based fall-detection workflow.
-- Researching possible Android and Firebase implementation approaches.
-- Improving documentation, presentation structure, and explanations.
-
-**Google AI Studio** was one of the AI-assisted development tools used during the project.
-
-However, AI was used as an **assistance and development tool**, not as a replacement for the student's understanding or project decisions.
-
-The student was responsible for:
-
-- Selecting the project concept.
-- Understanding and applying the Physics concepts.
-- Deciding how the system should work.
-- Reviewing and adapting AI-assisted code and suggestions.
-- Connecting the different components of the project.
-- Testing and evaluating the prototype.
-- Preparing the final project report and presentation.
-
-### Transparency Note
-
-This project was developed with the assistance of AI tools. AI-generated suggestions and code were reviewed, modified, and integrated as part of the student's development process.
+| Permission | Type | Why It Is Requested |
+| :--- | :--- | :--- |
+| `POST_NOTIFICATIONS` | Runtime (Android 13+) | Displays high-priority `"Are you okay?"` check-in notifications, clearly labelled `"TEST — not an emergency"` alerts, and the persistent foreground monitoring indicator. |
+| `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_SPECIAL_USE` | Install-time | Allows `MonitoringForegroundService` to show a truthful ongoing notification while the user explicitly enables monitoring. |
+| `VIBRATE` | Install-time | Provides a gentle vibration pulse when a possible-fall check-in countdown begins (can be toggled off in Settings). |
+| Location (`ACCESS_FINE_LOCATION`) | **Not requested** | Location collection is disabled by default for privacy and is not requested unless an explicit location-sharing feature is added later. |
 
 ---
 
-# ⚙️ How SoloSignal AI Works
+## 4. How to Test Safely Using Synthetic Sensor Traces
 
-### 1. Movement Monitoring
+**Never ask anyone to perform a real fall to test SoloSignal.**
 
-The Android device uses its motion sensors to collect movement information.
-
-The **accelerometer** provides acceleration measurements along multiple axes.
-
-### 2. AI Analysis
-
-The collected movement data can be analyzed as a sequence or pattern.
-
-Instead of assuming:
-
-```text
-High acceleration = Fall
-```
-
-the system can consider a combination of movement characteristics to identify a **possible fall event**.
-
-### 3. User Confirmation
-
-After a possible fall is detected, the application displays an emergency confirmation screen.
-
-```text
-        POSSIBLE FALL DETECTED
-
-             Are you okay?
-
-              [ I'M OKAY ]
-
-           Countdown: 10s
-```
-
-### 4. SOS Trigger
-
-If the user confirms that they are okay, the alert process stops.
-
-If there is no response, the system proceeds with the SOS workflow.
-
-### 5. Emergency Notification
-
-The system can send alert information to a trusted emergency contact.
-
-The notification can contain information such as:
-
-- Possible fall detected
-- Time of event
-- User/device information
-- Available location information
-- Optional emergency audio evidence
+1. Complete the **Onboarding** screen by tapping **Set up SoloSignal**.
+2. Open the **Contacts** tab, enter a contact name, a valid email address, check the explicit consent box, and tap **Save trusted contact**.
+3. Tap **Test alert (TEST — not an emergency)** on the **Home** or **Contacts** screen to verify the local test notification and inspect the generated payload preview.
+4. On the **Home** screen, scroll to the **Developer / Safe Trace Replay** card:
+   - Tap **Normal Walking**, **Sitting Down Quickly**, **Lying Down Intentionally**, **Jumping / Active Exercise**, **Single Isolated Peak**, or **Orientation Change Without Fall** -> Observe live `x/y/z` and `|a| = sqrt(x²+y²+z²)` telemetry update and verify that **none** of these non-fall traces trigger a false alarm.
+   - Tap **Staged Possible Fall Sequence** or **Phone Dropped on Floor (Synthetic)** -> Verify that the multi-feature sequence triggers the **"Are you okay?"** confirmation card with the live **20-second countdown**.
+5. Test both check-in branches:
+   - Tap **"I'm okay — cancel alert"** -> Cancels the countdown immediately and logs `"Cancelled by user (I'm okay)"` in the **Activity** tab.
+   - Tap **"Send help alert now"** (or let the 20-second countdown expire) -> Attempts the configured alert workflow, posts the local notification, and truthfully reports `"Alert failed (Remote backend not configured)"` (or `"Test sent (Local only)"` if Local-Only mode is selected) without fabricating remote email/Chat delivery.
 
 ---
 
-# 🎙️ SOS Audio Evidence Concept
+## 5. Known Limitations
 
-An optional feature of the project is an emergency audio system.
-
-When the user explicitly enables the feature and grants microphone permission, the application can maintain a **rolling audio buffer**.
-
-For example:
-
-```text
-Continuous Audio Buffer
-
-[ older audio ][ older audio ][ 15 sec recent audio ]
-                                      ↑
-                                Latest moment
-```
-
-If a possible fall occurs and the user does not respond, the recent audio can be preserved and uploaded securely.
-
-The backend can then attach the recording to the emergency notification or provide a secure link to it.
-
-### Important Privacy Principle
-
-The feature is designed around **explicit user permission**.
-
-It should not secretly record audio.
-
-The system should clearly indicate when microphone access is being used and follow Android's permission and background-execution requirements.
+- **Heuristic Screening Only:** `CandidateFallDetector` uses deterministic physics features (acceleration dip, multi-sample impact peak, 3D gravity vector tilt shift, and post-impact stillness). It is not a clinically validated ML classifier. Phone drops onto hard surfaces can mimic fall patterns and trigger the check-in screen.
+- **Android OS & Battery Restrictions:** Even with a foreground service, aggressive OEM battery savers, Doze mode, or screen-off sensor batching can delay or suspend accelerometer events on some physical devices.
+- **No Remote Server Configured in Client Build:** To keep OAuth secrets, SMTP credentials, and Google Chat webhook URLs out of the APK, remote Email and Google Chat delivery are intentionally unconfigured in this client-only build.
 
 ---
 
-
-
-# 🧠 Physics + AI
-
-The project combines Physics and AI in different roles.
-
-```text
-       PHYSICS
-          │
-          ▼
- Understand movement
- and acceleration
-          │
-          ▼
-    Sensor readings
-          │
-          ▼
-         AI
-          │
-          ▼
- Analyze movement
-      patterns
-          │
-          ▼
- Possible fall
-          │
-          ▼
-   Safety response
-```
-
-### Physics answers:
-
-> **What is happening to the motion?**
-
-### AI helps answer:
-
-> **Does this movement pattern look like a possible fall?**
-
-This combination makes the system more useful than simply setting a fixed acceleration threshold.
-
----
-
-# 🏗️ System Architecture
-
-```text
-┌──────────────────────┐
-│   Android Smartphone │
-│                      │
-│  Accelerometer       │
-│  Motion Sensors      │
-│  Optional Microphone │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│   SoloSignal AI      │
-│   Detection Logic    │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│   User Confirmation  │
-│    "I'm Okay"        │
-└──────────┬───────────┘
-           │
-      No Response
-           │
-           ▼
-┌──────────────────────┐
-│      Firebase        │
-│                      │
-│ Firestore + Storage  │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ Cloud Function /     │
-│ Notification System  │
-└──────────┬───────────┘
-           │
-           ▼
-     🚨 Emergency
-        Contact
-```
-
----
-
-# ☁️ Firebase Backend
-
-Firebase can be used as the cloud backend for the project.
-
-### Firebase Firestore
-
-Used for storing structured alert information such as:
-
-- Alert status
-- Timestamp
-- Device/user information
-- Event metadata
-- Processing status
-
-### Firebase Storage
-
-Used for storing optional emergency audio files.
-
-### Cloud Functions
-
-Cloud Functions can process an emergency event and communicate with an external email or notification service.
-
-This keeps sensitive service credentials away from the Android application.
-
----
-
-# 📱 SOS Workflow
-
-```text
-Possible Fall
-      │
-      ▼
-Detection Event
-      │
-      ▼
-Show "Are You Okay?"
-      │
-      ├──────────────► User responds
-      │                    │
-      │                    ▼
-      │                 Stop SOS
-      │
-      ▼
-No response
-      │
-      ▼
-Create emergency event
-      │
-      ├──► Save metadata
-      │
-      ├──► Preserve optional audio
-      │
-      ▼
-Upload securely
-      │
-      ▼
-Cloud Function
-      │
-      ▼
-Emergency notification
-      │
-      ▼
-Trusted Contact
-```
-
----
-
-# 🛠️ Tools Used
-
-### Google AI Studio
-
-Used as an AI-assisted development and prototyping tool for:
-
-- Project planning
-- Technical exploration
-- Code assistance
-- AI workflow development
-- Debugging and refinement
-
-### Android Studio
-
-Used for Android application development.
-
-### Firebase
-
-Used for backend services such as:
-
-- Firestore
-- Storage
-- Cloud Functions
-
-### Kotlin
-
-Used as the primary Android programming language.
-
-### Android Sensor APIs
-
-Used to access smartphone motion sensor data.
-
----
-
-# ✨ Main Features
-
-- 📱 Smartphone motion monitoring
-- 📈 Accelerometer-based movement analysis
-- 🤖 AI-assisted fall-pattern detection
-- 🚨 SOS confirmation workflow
-- 👆 Large **“I'm Okay”** button
-- ⏱️ Emergency countdown
-- ☁️ Firebase backend integration
-- 📩 Trusted-contact notification concept
-- 🔄 Retry and recovery considerations for network failures
-
----
-
-# 🔐 Privacy & Safety
-
-Privacy is an important part of the project.
-
-The system should:
-
-- Request microphone permission before using audio.
-- Never secretly record audio.
-- Store emergency information securely.
-- Keep cloud credentials out of the Android application.
-- Clearly communicate when emergency monitoring features are active.
-- Allow the user to disable optional audio functionality.
-- Follow Android platform privacy and background-execution requirements.
-
-SoloSignal AI is an **academic prototype** and should not be treated as a replacement for professional emergency, medical, or personal safety systems.
-
----
-
-# ⚠️ Limitations
-
-The prototype has several limitations.
-
-### Sensor Limitations
-
-Smartphone sensors can produce different readings depending on:
-
-- Phone orientation
-- Phone placement
-- Device hardware
-- User movement
-- Environmental conditions
-
-### Detection Limitations
-
-Not every sudden movement is a fall.
-
-For example:
-
-```text
-Running
-Jumping
-Dropping the phone
-Sitting down quickly
-Sudden phone rotation
-```
-
-could potentially create unusual sensor patterns.
-
-Therefore, false positives and false negatives are possible.
-
-### Android Limitations
-
-Background sensor and microphone functionality can be affected by Android operating-system restrictions, permissions, battery optimization, and device-specific behavior.
-
-### Network Limitations
-
-Cloud-based alerts require network connectivity.
-
-If the device has poor or no connectivity, notification delivery may be delayed or unavailable.
-
----
-
-
-# 📊 Project Evaluation
-
-The prototype can be evaluated using different movement scenarios.
-
-| Scenario | Expected Result |
-|---|---|
-| Normal walking | No alert |
-| Sitting normally | No alert |
-| Phone rotation | No emergency |
-| Sudden movement | Analyze pattern |
-| Possible fall | Show confirmation |
-| Fall + user responds | Cancel SOS |
-| Fall + no response | Trigger SOS |
-| Network unavailable | Retry / handle failure |
-
-These tests help determine how reliably the system distinguishes normal movement from possible emergency events.
-
----
-
-# 🎥 Project Media
-
-## Project Presentation
-
-`https://canva.link/solo-signal-ai`
-
----
-
-
----
-
-# 📌 Project Information
-
-| Field | Details |
-|---|---|
-| Project | SoloSignal AI |
-| Student |Alvin B Abhilash, and Figo Suresh |
-
-| Subject | AI / Computer Science |
-| Platform | Android |
-| Language | Kotlin |
-| AI Tool | Google AI Studio |
-| Development Tool | Android Studio |
-| Backend | Firebase |
-| Main Sensor | Accelerometer |
-| Project Type | Academic Prototype |
-
----
-
-# 🧪 Project Status
-
-**Status:** Prototype / Academic Project
-
-The project demonstrates how smartphone sensors, Physics concepts, AI-assisted analysis, and cloud services can be combined to explore a real-world personal safety problem.
-
----
-
-# 📚 References
-
-- Android Sensor APIs
-- Android permission and background-execution documentation
-- Firebase documentation
-- Google AI Studio documentation
-
----
-
-# ⚖️ Disclaimer
-
-SoloSignal AI is an **educational prototype** created as part of a student project.
-
-It is intended to demonstrate the application of Physics, mobile sensors, AI, and software development to a real-world problem.
-
-It has not been certified as a medical device or emergency-response system.
-
-The system may produce false positives or fail to detect some events. It should therefore **not be relied upon as the sole method of emergency protection**.
-
----
-
-# 🎬 Final Note
-
-SoloSignal AI explores a simple idea:
-
-> **What if a phone could recognize when something might be wrong and ask for help before it is too late?**
-
-
-
-**Built as a student project by Alvin B Abhilash, and Figo Suresh**
-
----
+## 6. Implemented Features vs. Placeholders
+
+### Implemented
+- Complete 6-screen Jetpack Compose UI following the pastel visual specification (`Onboarding`, `Home`, `Possible-Fall Check-In`, `Trusted Contact`, `Activity History`, `Settings & Privacy`).
+- Real `SensorManager` runtime inspection for `Sensor.TYPE_ACCELEROMETER` (plus optional linear acceleration and rotation vector checks) and strict opt-in `SensorEventListener` registration/unregistration.
+- Standalone, unit-tested `CandidateFallDetector` with bounded rolling window, `sqrt(x²+y²+z²)` magnitude, delta magnitude, tilt shift, post-event stillness, single-spike rejection, and 15-second duplicate-alert cooldown.
+- 8-scenario `SyntheticSensorTraces` replay harness for safe testing.
+- Cancelable 20-second check-in countdown with duplicate-alert prevention per event ID.
+- Local event history stored in Room (`EventHistoryDatabase`) with zero fake/seeded data and full deletion control.
+- Persistent contact & preferences storage via Jetpack DataStore (`PreferencesRepository`).
+- Local Android notification channels and foreground service (`MonitoringForegroundService`).
+
+### Placeholders (Next Steps for External Integration)
+- **Remote Email / Google Chat Delivery (`RemoteAlertGateway`):** The client implements `RemoteAlertGateway` and formats the complete `AlertMessagePayload`, but `LocalAndPlaceholderAlertGateway` truthfully reports remote Email/Chat as unavailable. **Next step:** Deploy a Firebase Cloud Function or authenticated HTTPS endpoint that holds the SMTP/Gmail OAuth or Google Chat space webhook credentials on the server, and implement `RemoteAlertGateway.attemptAlertDelivery()` to POST the payload over HTTPS and return `AlertDeliveryResult.ConfirmedRemoteSuccess` only on HTTP 200 confirmation.
+- **Trained Time-Series ML Classifier:** **Next step:** Collect and label multi-device, multi-placement fall and daily-activity datasets, train/validate a LiteRT (TensorFlow Lite) time-series model, and plug it behind the detector interface alongside calibrated sensitivity/false-alarm metrics.
