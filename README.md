@@ -68,3 +68,15 @@
 - **No Remote Server Configured in Client Build:** To keep OAuth secrets, SMTP credentials, and Google Chat webhook URLs out of the APK, remote Email and Google Chat delivery are intentionally unconfigured in this client-only build.
 
 ---
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
