@@ -18,6 +18,16 @@
         "doc",
         "design"
       ]
+    },
+    {
+      "login": "AlvinGPT",
+      "name": "AlvinGPT.exe",
+      "avatar_url": "https://avatars.githubusercontent.com/u/177337501?v=4",
+      "profile": "https://github.com/AlvinGPT",
+      "contributions": [
+        "code",
+        "doc"
+      ]
     }
   ]
 }
