@@ -78,6 +78,7 @@
   <tbody>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/figosuresh"><img src="https://avatars.githubusercontent.com/u/266002334?v=4?s=100" width="100px;" alt="figosuresh"/><br /><sub><b>figosuresh</b></sub></a><br /><a href="#code-figosuresh" title="Code">💻</a> <a href="#doc-figosuresh" title="Documentation">📖</a> <a href="#design-figosuresh" title="Design">🎨</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/AlvinGPT"><img src="https://avatars.githubusercontent.com/u/177337501?v=4?s=100" width="100px;" alt="AlvinGPT.exe"/><br /><sub><b>AlvinGPT.exe</b></sub></a><br /><a href="#code-AlvinGPT" title="Code">💻</a> <a href="#doc-AlvinGPT" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
