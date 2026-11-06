@@ -18,19 +18,23 @@ import com.example.domain.TrustedContactVerificationStatus
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "solosignal_preferences")
 
 data class UserPreferencesState(
     val onboardingCompleted: Boolean = false,
+    val monitoringEnabled: Boolean = false,
     val countdownSeconds: Int = 15,
     val vibrationEnabled: Boolean = true,
+    val selectedLanguageCode: String = "en",
     val sosAudioEnabled: Boolean = false,
     val sosAudioConsentGranted: Boolean = false,
     val sosAudioRetentionDays: Int = 7,
@@ -47,8 +51,11 @@ class PreferencesRepository(private val context: Context) {
     private object GlobalKeys {
         val COUNTDOWN_SECONDS = intPreferencesKey("countdown_seconds_v2")
         val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
+        val SELECTED_LANGUAGE_CODE = stringPreferencesKey("selected_language_code")
         val DEVICE_INSTALLATION_ID = stringPreferencesKey("device_installation_id")
         val FCM_TOKEN = stringPreferencesKey("fcm_token")
+        val GLOBAL_MONITORING_ENABLED = booleanPreferencesKey("global_monitoring_enabled")
+        val MONITORING_PENDING_RESTART = booleanPreferencesKey("monitoring_pending_restart")
 
         // Legacy unscoped keys (used ONLY for safe one-time migration when linkId matches the authenticated uid)
         val LEGACY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -73,6 +80,7 @@ class PreferencesRepository(private val context: Context) {
 
     private data class UserScopedKeys(val scopePrefix: String) {
         val ONBOARDING_COMPLETED = booleanPreferencesKey("${scopePrefix}_onboarding_completed")
+        val MONITORING_ENABLED = booleanPreferencesKey("${scopePrefix}_monitoring_enabled")
         val GMAIL_ACCESS_TOKEN = stringPreferencesKey("${scopePrefix}_gmail_access_token")
 
         val USER_DISPLAY_NAME = stringPreferencesKey("${scopePrefix}_user_display_name")
@@ -109,10 +117,12 @@ class PreferencesRepository(private val context: Context) {
         val CHAT_LAST_VERIFIED_MILLIS = longPreferencesKey("${scopePrefix}_chat_last_verified_millis")
     }
 
-    private val sharedPrefs = context.applicationContext.getSharedPreferences(
-        "solosignal_scoped_user_prefs",
-        Context.MODE_PRIVATE
-    )
+    private val sharedPrefs by lazy {
+        context.applicationContext.getSharedPreferences(
+            "solosignal_scoped_user_prefs",
+            Context.MODE_PRIVATE
+        )
+    }
     private val _activeUserId = MutableStateFlow<String?>(resolveCurrentFirebaseUid())
     val activeUserId: StateFlow<String?> = _activeUserId.asStateFlow()
     private val _prefsUpdateTick = MutableStateFlow(0L)
@@ -177,7 +187,7 @@ class PreferencesRepository(private val context: Context) {
         val effectiveUid = activeUid ?: resolveCurrentFirebaseUid()
         val dsPrefs = safeDataStoreSnapshot()
         buildUserPreferencesState(dsPrefs, effectiveUid)
-    }
+    }.flowOn(Dispatchers.IO)
 
     private fun readString(ds: Preferences?, key: Preferences.Key<String>): String? {
         if (sharedPrefs.contains(key.name)) {
@@ -327,10 +337,16 @@ class PreferencesRepository(private val context: Context) {
             ?: (if (canReadLegacyForThisUid) readBoolean(prefs, GlobalKeys.LEGACY_ONBOARDING_COMPLETED) else null)
             ?: false
 
+        val monitoringActive = readBoolean(prefs, keys.MONITORING_ENABLED)
+            ?: readBoolean(prefs, GlobalKeys.GLOBAL_MONITORING_ENABLED)
+            ?: false
+
         return UserPreferencesState(
             onboardingCompleted = onboardingDone,
+            monitoringEnabled = monitoringActive,
             countdownSeconds = (readInt(prefs, GlobalKeys.COUNTDOWN_SECONDS) ?: 15).coerceIn(10, 60),
             vibrationEnabled = readBoolean(prefs, GlobalKeys.VIBRATION_ENABLED) ?: true,
+            selectedLanguageCode = readString(prefs, GlobalKeys.SELECTED_LANGUAGE_CODE) ?: "en",
             sosAudioEnabled = sosAudioEnabled,
             sosAudioConsentGranted = sosAudioConsentGranted,
             sosAudioRetentionDays = sosAudioRetentionDays,
@@ -401,6 +417,41 @@ class PreferencesRepository(private val context: Context) {
             prefs[keys.ONBOARDING_COMPLETED] = completed
         }
         notifyPrefsChanged()
+    }
+
+    suspend fun setMonitoringEnabled(enabled: Boolean, uidOverride: String? = null) {
+        val keys = scopedKeysFor(uidOverride)
+        sharedPrefs.edit()
+            .putBoolean(keys.MONITORING_ENABLED.name, enabled)
+            .putBoolean(GlobalKeys.GLOBAL_MONITORING_ENABLED.name, enabled)
+            .putBoolean(GlobalKeys.MONITORING_PENDING_RESTART.name, false)
+            .commit()
+        safeDataStoreEdit { prefs ->
+            prefs[keys.MONITORING_ENABLED] = enabled
+            prefs[GlobalKeys.GLOBAL_MONITORING_ENABLED] = enabled
+            prefs[GlobalKeys.MONITORING_PENDING_RESTART] = false
+        }
+        notifyPrefsChanged()
+    }
+
+    fun isMonitoringEnabled(uidOverride: String? = null): Boolean {
+        val keys = scopedKeysFor(uidOverride)
+        if (sharedPrefs.contains(keys.MONITORING_ENABLED.name)) {
+            return sharedPrefs.getBoolean(keys.MONITORING_ENABLED.name, false)
+        }
+        return sharedPrefs.getBoolean(GlobalKeys.GLOBAL_MONITORING_ENABLED.name, false)
+    }
+
+    suspend fun setMonitoringPendingRestart(pending: Boolean) {
+        sharedPrefs.edit().putBoolean(GlobalKeys.MONITORING_PENDING_RESTART.name, pending).commit()
+        safeDataStoreEdit { prefs ->
+            prefs[GlobalKeys.MONITORING_PENDING_RESTART] = pending
+        }
+        notifyPrefsChanged()
+    }
+
+    fun isMonitoringPendingRestart(): Boolean {
+        return sharedPrefs.getBoolean(GlobalKeys.MONITORING_PENDING_RESTART.name, false)
     }
 
     suspend fun saveTrustedContact(contact: TrustedContact, uidOverride: String? = null) {
@@ -651,6 +702,19 @@ class PreferencesRepository(private val context: Context) {
             prefs[GlobalKeys.VIBRATION_ENABLED] = enabled
         }
         notifyPrefsChanged()
+    }
+
+    suspend fun setSelectedLanguageCode(languageCode: String) {
+        val cleanCode = languageCode.trim().lowercase()
+        sharedPrefs.edit().putString(GlobalKeys.SELECTED_LANGUAGE_CODE.name, cleanCode).commit()
+        safeDataStoreEdit { prefs ->
+            prefs[GlobalKeys.SELECTED_LANGUAGE_CODE] = cleanCode
+        }
+        notifyPrefsChanged()
+    }
+
+    fun getSelectedLanguageCode(): String {
+        return sharedPrefs.getString(GlobalKeys.SELECTED_LANGUAGE_CODE.name, "en") ?: "en"
     }
 
     companion object {

@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SoloSignal AI</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">ഹോം</string>
+    <string name="nav_activity">ആക്റ്റിവിറ്റി</string>
+    <string name="nav_contacts">കോൺടാക്റ്റുകൾ</string>
+    <string name="nav_settings">ക്രമീകരണങ്ങൾ</string>
+
+    <!-- Home Screen -->
+    <string name="cd_app_logo">സോളോസിഗ്നൽ എഐ സുരക്ഷാ ലോഗോ</string>
+    <string name="home_subtitle_safety_companion">വ്യക്തിഗത സുരക്ഷ, ഒരു തുണയോടൊപ്പം</string>
+    <string name="hero_eyebrow_active">സജീവ ചലന നിരീക്ഷണം</string>
+    <string name="hero_eyebrow_idle">സ്റ്റാൻഡ്‌ബൈ</string>
+    <string name="hero_headline_active">നിങ്ങളുടെ ചലനങ്ങൾ ഞങ്ങൾ ശ്രദ്ധിക്കുന്നു</string>
+    <string name="hero_headline_idle">സുരക്ഷാ പരിശോധനയ്ക്കായി തയ്യാറാണ്</string>
+    <string name="hero_description_sensor_ready">വീഴ്ചയുടെ ആഘാതവും ചലനരഹിതാവസ്ഥയും ഫോൺ തിരിച്ചറിയുന്നു. തുടർന്ന് നിങ്ങളുടെ വിശ്വസ്ത കോൺടാക്റ്റിനെ അറിയിക്കുന്നതിന് മുമ്പ് 15 സെക്കൻഡ് റദ്ദാക്കാവുന്ന പരിശോധന നൽകുന്നു.</string>
+    <string name="hero_description_no_sensor">ഈ ഉപകരണത്തിൽ ആക്സിലറോമീറ്റർ ലഭ്യമല്ല. പരിശോധനയ്ക്കായി താഴെയുള്ള സിന്തറ്റിക് ചലന സാമ്പിളുകൾ ഉപയോഗിക്കുക.</string>
+    <string name="action_start_monitoring">നിരീക്ഷണം ആരംഭിക്കുക</string>
+    <string name="action_stop_monitoring">നിരീക്ഷണം നിർത്തുക</string>
+    <string name="home_contact_card_eyebrow">വിശ്വസ്ത കോൺടാക്റ്റ്</string>
+    <string name="home_contact_not_set">വിശ്വസ്ത കോൺടാക്റ്റ് നൽകിയിട്ടില്ല</string>
+    <string name="action_add_contact">വിശ്വസ്ത കോൺടാക്റ്റ് ചേർക്കുക</string>
+    <string name="action_send_test_alert">ടെസ്റ്റ് അലേർട്ട് അയയ്ക്കുക</string>
+    <string name="telemetry_card_eyebrow">തത്സമയ ചലന വിൻഡോ (3.5 സെക്കൻഡ്)</string>
+    <string name="metric_peak_label">പീക്ക്</string>
+    <string name="metric_min_label">മിനിമം</string>
+    <string name="metric_tilt_label">ടിൽറ്റ്</string>
+    <string name="metric_stillness_label">നിശ്ചലാവസ്ഥ σ</string>
+    <string name="replay_card_eyebrow">സുരക്ഷിത പരീക്ഷണ റീപ്ലേ</string>
+    <string name="replay_card_title">സിന്തറ്റിക് ചലന റീപ്ലേകൾ</string>
+    <string name="replay_card_subtitle">ഫോൺ താഴെ ഇടാതെ തന്നെ വീഴ്ച കണ്ടെത്തലും 15 സെക്കൻഡ് കൗണ്ട്ഡൗണും സുരക്ഷിതമായി പരിശോധിക്കുക.</string>
+    <string name="safety_not_911_notice">പരീക്ഷണാടിസ്ഥാനത്തിലുള്ള ഉപകരണം — സോളോസിഗ്നൽ 911 അല്ലെങ്കിൽ അത്യാഹിത വിഭാഗവുമായി നേരിട്ട് ബന്ധപ്പെടില്ല.</string>
+
+    <!-- Check-in Overlay & Notifications -->
+    <string name="notif_channel_checkin_name">അടിയന്തര വീഴ്ച പരിശോധന കൗണ്ട്ഡൗൺ</string>
+    <string name="notif_channel_checkin_desc">വീഴ്ച തിരിച്ചറിയുമ്പോൾ ഉയർന്ന മുൻഗണനയുള്ള കൗണ്ട്ഡൗൺ അറിയിപ്പ്</string>
+    <string name="notif_channel_dispatch_name">അടിയന്തര മുന്നറിയിപ്പ് അയച്ച നില</string>
+    <string name="notif_channel_dispatch_desc">അടിയന്തര അല്ലെങ്കിൽ ടെസ്റ്റ് അലേർട്ട് അയയ്ക്കുമ്പോഴുള്ള അറിയിപ്പുകൾ</string>
+    <string name="checkin_notif_title">വീഴ്ച സംഭവിച്ചതായി സംശയിക്കുന്നു — കുഴപ്പമൊന്നുമില്ലല്ലോ? (%1$ds)</string>
+    <string name="checkin_notif_body">റദ്ദാക്കാൻ \'എനിക്ക് കുഴപ്പമില്ല\' ടാപ്പ് ചെയ്യുക, അല്ലെങ്കിൽ ഉടൻ സന്ദേശമയക്കാൻ \'SOS അയയ്ക്കുക\' ടാപ്പ് ചെയ്യുക.</string>
+    <string name="action_im_okay">എനിക്ക് കുഴപ്പമില്ല</string>
+    <string name="action_need_help_now">ഇപ്പോൾ SOS അയയ്ക്കുക</string>
+    <string name="checkin_badge_active">വീഴ്ച സംഭവിച്ചതായി സംശയിക്കുന്നു</string>
+    <string name="checkin_headline">നിങ്ങൾക്ക് കുഴപ്പമൊന്നുമില്ലല്ലോ?</string>
+    <string name="checkin_subheadline_no_contact">റദ്ദാക്കാൻ \'എനിക്ക് കുഴപ്പമില്ല\' തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ ഉടൻ അടിയന്തര അലേർട്ട് അയയ്ക്കാൻ \'ഇപ്പോൾ SOS അയയ്ക്കുക\' തിരഞ്ഞെടുക്കുക.</string>
+    <string name="checkin_remaining_label">ഓട്ടോ അലേർട്ട് വരെ</string>
+    <string name="checkin_reason_eyebrow">കണ്ടെത്തിയ ചലന ക്രമം</string>
+
+    <!-- Trusted Contacts Screen -->
+    <string name="contacts_headline">വിശ്വസ്ത കോൺടാക്റ്റും പരിശോധനയും</string>
+    <string name="field_your_name_label">നിങ്ങളുടെ പേര് (സ്വീകർത്താവിന് കാണിക്കുന്നത്)</string>
+    <string name="field_your_name_hint">ഉദാ. രാഹുൽ</string>
+    <string name="field_contact_name_label">വിശ്വസ്ത കോൺടാക്റ്റിന്റെ പേര്</string>
+    <string name="field_contact_name_hint">ഉദാ. അഞ്ജലി</string>
+    <string name="field_contact_email_hint">ഉദാ. anjali@example.com</string>
+    <string name="field_contact_phone_hint">ഉദാ. +91 9876543210</string>
+    <string name="field_relationship_eyebrow">ബന്ധം</string>
+    <string name="contacts_location_toggle_title">ജിപിഎസ് ലൊക്കേഷനും ഗൂഗിൾ മാപ്സ് ലിങ്കും ഉൾപ്പെടുത്തുക</string>
+    <string name="contacts_location_toggle_subtitle">അടിയന്തര അലേർട്ട് അയയ്ക്കുമ്പോൾ നിങ്ങളുടെ കോർഡിനേറ്റുകളും ഗൂഗിൾ മാപ്സ് ലിങ്കും പങ്കിടുന്നു.</string>
+    <string name="contacts_consent_text">സുരക്ഷാ അലേർട്ടുകൾ സ്വീകരിക്കാൻ ഈ വ്യക്തി സമ്മതിച്ചിട്ടുണ്ടെന്ന് ഞാൻ സ്ഥിരീകരിക്കുന്നു.</string>
+    <string name="error_contact_consent_required">അലേർട്ടുകൾ ലഭിക്കുന്നതിന് നിങ്ങളുടെ വിശ്വസ്ത കോൺടാക്റ്റ് സമ്മതിച്ചിട്ടുണ്ടെന്ന് സ്ഥിരീകരിക്കുക.</string>
+    <string name="contacts_channel_section_eyebrow">അലേർട്ട് അയയ്ക്കൽ ചാനൽ</string>
+    <string name="contacts_channel_section_title">അലേർട്ടുകൾ എങ്ങനെ അയയ്ക്കുന്നു</string>
+    <string name="contacts_last_payload_eyebrow">അവസാന സന്ദേശ വിവരണം</string>
+    <string name="google_chat_backend_url_label">ക്ലൗഡ് ഫംഗ്ഷൻ ബാക്കെൻഡ് URL (HTTPS)</string>
+    <string name="google_chat_space_id_label">ഗൂഗിൾ ചാറ്റ് സ്പേസ് ID (ഉദാ. spaces/AAAABBBB)</string>
+    <string name="google_chat_space_label_input">സ്പേസ് ഡിസ്പ്ലേ പേര് (ഓപ്ഷണൽ)</string>
+    <string name="google_chat_save_connect_cta">ഗൂഗിൾ ചാറ്റ് സ്പേസ് സംരക്ഷിക്കുകയും പരിശോധിക്കുകയും ചെയ്യുക</string>
+
+    <!-- Settings & Privacy Screen -->
+    <string name="settings_eyebrow">ക്രമീകരണങ്ങൾ, അനുമതികൾ &amp; സ്വകാര്യത</string>
+    <string name="settings_headline">സുരക്ഷ &amp; സ്വകാര്യതാ നിയന്ത്രണങ്ങൾ</string>
+    <string name="settings_subtitle">കൗണ്ട്ഡൗൺ സമയം, ലൊക്കേഷൻ, അറിയിപ്പ് അനുമതികൾ എന്നിവ നിയന്ത്രിക്കുക.</string>
+    <string name="settings_checkin_section_eyebrow">പരിശോധന കൗണ്ട്ഡൗൺ &amp; ഫീഡ്‌ബാക്ക്</string>
+    <string name="settings_countdown_label">പരിശോധന കൗണ്ട്ഡൗൺ ദൈർഘ്യം</string>
+    <string name="settings_countdown_helper">അടിയന്തര അലേർട്ട് അയയ്ക്കുന്നതിന് മുൻപ് \'എനിക്ക് കുഴപ്പമില്ല\' ടാപ്പ് ചെയ്യാൻ എത്ര സമയം കാത്തിരിക്കണം.</string>
+    <string name="settings_vibration_title">കൗണ്ട്ഡൗണിലും അലേർട്ടിലും വൈബ്രേറ്റ് ചെയ്യുക</string>
+    <string name="settings_vibration_subtitle">15 സെക്കൻഡ് പരിശോധനാ സമയത്തും അലേർട്ട് വരുമ്പോഴും ഫോൺ വൈബ്രേറ്റ് ചെയ്യുന്നു.</string>
+    <string name="diag_accelerometer_label">ആക്സിലറോമീറ്റർ ഹാർഡ്‌വെയർ</string>
+    <string name="diag_sensor_present">ലഭ്യമാണ് (~50 Hz)</string>
+    <string name="diag_sensor_missing">ലഭ്യമല്ല (സിന്തറ്റിക് സാമ്പിളുകൾ ഉപയോഗിക്കുക)</string>
+    <string name="privacy_card_eyebrow">സ്വകാര്യത &amp; സുരക്ഷാ പരിരക്ഷ</string>
+    <string name="privacy_card_title">സീറോ-ട്രസ്റ്റ് സ്വകാര്യതാ ഘടന</string>
+    <string name="privacy_card_bullets">• ചലന വിവരങ്ങൾ നിങ്ങളുടെ ഫോണിലെ 3.5 സെക്കൻഡ് മെമ്മറി ബഫറിൽ സൂക്ഷിക്കുന്നു, ഒരിടത്തും അപ്‌ലോഡ് ചെയ്യുന്നില്ല.\n• പൊതു ഡയറക്ടറി ഇല്ല; പ്രാമാണീകരിച്ച അഭ്യർത്ഥനകൾ വഴി വിശ്വസ്ത കോൺടാക്റ്റുകൾ പരിശോധിക്കപ്പെടുന്നു.\n• എഫ്‌സിഎം ടോക്കണുകൾ സ്വകാര്യമായി സൂക്ഷിക്കുന്നു.</string>
+    <string name="delete_data_eyebrow">ഡാറ്റ നിയന്ത്രണം</string>
+    <string name="delete_data_title">എല്ലാ സ്വകാര്യ ഡാറ്റയും ഇല്ലാതാക്കുക &amp; കോൺടാക്റ്റുകൾ നീക്കം ചെയ്യുക</string>
+    <string name="delete_data_subtitle">ഇവന്റ് ചരിത്രം, സംരക്ഷിച്ച കോൺടാക്റ്റ്, അംഗീകാരങ്ങൾ എന്നിവ മായ്‌ക്കുന്നു.</string>
+    <string name="action_delete_all_data">എല്ലാ സ്വകാര്യ ഡാറ്റയും ഇല്ലാതാക്കുക</string>
+    <string name="delete_data_confirm_prompt">ചരിത്രം, കോൺടാക്റ്റുകൾ, അംഗീകാരങ്ങൾ എന്നിവയെല്ലാം ഇല്ലാതാക്കണമെന്ന് ഉറപ്പാണോ?</string>
+    <string name="action_confirm_delete">അതെ, എല്ലാം ഇല്ലാതാക്കുക</string>
+    <string name="action_cancel">റദ്ദാക്കുക</string>
+
+    <!-- Language Selection -->
+    <string name="settings_language_label">ആപ്പ് ഭാഷ</string>
+    <string name="settings_language_subtitle">സോളോസിഗ്നൽ എഐ ഡിസ്പ്ലേ ഭാഷ തിരഞ്ഞെടുക്കുക</string>
+    <string name="dialog_select_language_title">ഭാഷ തിരഞ്ഞെടുക്കുക</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">العربية (Arabic)</string>
+    <string name="language_malayalam">മലയാളം (Malayalam)</string>
+    <string name="language_hindi">हिन्दी (Hindi)</string>
+    <string name="language_tamil">தமிழ் (Tamil)</string>
+    <string name="language_telugu">తెలుగు (Telugu)</string>
+    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+    <string name="language_bengali">বাংলা (Bengali)</string>
+    <string name="language_marathi">मराठी (Marathi)</string>
+    <string name="language_gujarati">ગુજરાતી (Gujarati)</string>
+    <string name="language_punjabi">ਪੰਜਾਬੀ (Punjabi)</string>
+    <string name="language_urdu">اردو (Urdu)</string>
+
+    <!-- Additional Emergency & Check-in strings -->
+    <string name="checkin_emergency_sos_active">അടിയന്തര SOS സജീവം</string>
+    <string name="checkin_dispatched_to_contact">%1$s-ലേക്ക് അടിയന്തര മുന്നറിയിപ്പ് അയച്ചു. അലാറം മുഴങ്ങുന്നു.</string>
+    <string name="checkin_sos_active_generic">അടിയന്തര SOS സജീവം. അലാറം മുഴങ്ങുന്നു.</string>
+    <string name="checkin_sending_sos_countdown">റദ്ദാക്കിയില്ലെങ്കിൽ %2$d സെക്കൻഡിനുള്ളിൽ %1$s-ലേക്ക് SOS അയയ്ക്കും.</string>
+    <string name="checkin_tap_ok_or_sos">റദ്ദാക്കാൻ \'എനിക്ക് കുഴപ്പമില്ല\' ടാപ്പ് ചെയ്യുക, അല്ലെങ്കിൽ ഇപ്പോൾ SOS അയയ്ക്കുക.</string>
+    <string name="checkin_gps_ready">ജിപിഎസ് ലൊക്കേഷൻ സജ്ജമാണ്</string>
+    <string name="checkin_location_disabled">ലൊക്കേഷൻ ഓഫാണ്</string>
+    <string name="checkin_allow_gps">ജിപിഎസ് അനുവദിക്കുക</string>
+    <string name="checkin_sos_discard_notice">SOS റദ്ദാക്കാനും താൽക്കാലിക ഓഡിയോ ഒഴിവാക്കാനും \"എനിക്ക് കുഴപ്പമില്ല\" ടാപ്പ് ചെയ്യുക.</string>
+    <string name="seconds_label">സെക്കൻഡ്</string>
+
+    <!-- Settings & Permissions -->
+    <string name="settings_sign_out">സൈൻ ഔട്ട്</string>
+    <string name="settings_clear">മായ്ക്കുക</string>
+    <string name="permission_location_title">ലൊക്കേഷൻ അനുമതി</string>
+    <string name="permission_location_desc">അലേർട്ടുകളിൽ ജിപിഎസ് ലൊക്കേഷൻ ഉൾപ്പെടുത്താൻ ആവശ്യമാണ്.</string>
+    <string name="permission_mic_title">മൈക്രോഫോൺ അനുമതി</string>
+    <string name="permission_mic_desc">ഓപ്ഷണൽ: SOS ഓഡിയോ റെക്കോർഡിംഗ് പ്രവർത്തനക്ഷമമാക്കുമ്പോൾ മാത്രം ഉപയോഗിക്കുന്നു.</string>
+    <string name="permission_notif_title">അടിയന്തര അറിയിപ്പുകൾ</string>
+    <string name="permission_notif_desc">പ്രധാനപ്പെട്ട അലേർട്ട് പോപ്പ്-അപ്പുകൾക്ക് ആവശ്യമാണ്.</string>
+    <string name="permission_fullscreen_title">ഫുൾ-സ്ക്രീൻ എമർജൻസി അലേർട്ടുകൾ</string>
+    <string name="permission_fullscreen_desc">ലോക്ക് സ്ക്രീനിലും ഡിസ്പ്ലേ ഉണർത്തി അടിയന്തര സ്ക്രീൻ കാണിക്കുന്നു.</string>
+    <string name="permission_grant">അനുവദിക്കുക</string>
+    <string name="permission_grant_mic">മൈക്രോഫോൺ അനുമതി നൽകുക</string>
+    <string name="settings_delete_audio_clips">സംരക്ഷിച്ച SOS ഓഡിയോ ക്ലിപ്പുകൾ നീക്കം ചെയ്യുക</string>
+    <string name="settings_agree_and_enable">സമ്മതിച്ച് പ്രവർത്തനക്ഷമമാക്കുക</string>
+    <string name="action_yes_delete">അതെ, ഇല്ലാതാക്കുക</string>
+
+    <!-- Medical ID & Post Fall Assessment -->
+    <string name="medical_id_title">അടിയന്തര മെഡിക്കൽ ഐഡി</string>
+    <string name="medical_id_close">അടയ്ക്കുക</string>
+    <string name="medical_id_clear">മെഡിക്കൽ ഐഡി വിവരങ്ങൾ മായ്‌ക്കുക</string>
+    <string name="post_fall_skip">ഒഴിവാക്കുക</string>
+    <string name="post_fall_read_aloud">ഉച്ചത്തിൽ വായിക്കുക</string>
+    <string name="post_fall_voice_on">വോയ്‌സ് ഓൺ</string>
+    <string name="post_fall_step_progress">%1$d / %2$d</string>
+
+    <!-- Post-Fall Assessment Questions & Wizard -->
+    <string name="pfa_q1_title">എന്താണ് സംഭവിച്ചത്?</string>
+    <string name="pfa_q2_title">നിങ്ങൾക്ക് കുഴപ്പമൊന്നുമില്ലല്ലോ?</string>
+    <string name="pfa_q3_title">നിങ്ങൾക്ക് വേദനയുണ്ടോ?</string>
+    <string name="pfa_q4_title">ശ്വാസമെടുക്കാൻ ബുദ്ധിമുട്ടുണ്ടോ?</string>
+    <string name="pfa_q5_title">സഹായം ആവശ്യമുണ്ടോ?</string>
+
+    <!-- Q1 Options & Badges -->
+    <string name="pfa_opt_fell">ഞാൻ വീണുപോയി</string>
+    <string name="pfa_opt_phone_fell">ഫോൺ താഴെ വീണതാണ്</string>
+    <string name="pfa_opt_sitting">ഞാൻ ഇരിക്കുകയായിരുന്നു</string>
+    <string name="pfa_opt_moving">ഞാൻ നടക്കുകയായിരുന്നു</string>
+    <string name="pfa_opt_false_alarm">തെറ്റായ കണ്ടെത്തൽ</string>
+    <string name="pfa_opt_unsure">ഉറപ്പില്ല</string>
+    <string name="pfa_badge_fall">വീഴ്ച</string>
+    <string name="pfa_badge_phone_only">ഫോൺ മാത്രം</string>
+    <string name="pfa_badge_sitting">ഇരിക്കൽ</string>
+    <string name="pfa_badge_normal">സാധാരണ</string>
+    <string name="pfa_badge_false_alarm">തെറ്റായ അലാറം</string>
+    <string name="pfa_badge_unsure">ഉറപ്പില്ല</string>
+
+    <!-- Q2 Options & Badges -->
+    <string name="pfa_feeling_yes">അതെ, കുഴപ്പമൊന്നുമില്ല</string>
+    <string name="pfa_feeling_uncomfortable">ചെറിയ അസ്വസ്ഥതയുണ്ട്</string>
+    <string name="pfa_feeling_no">ഇല്ല, വയ്യായ്ക തോന്നുന്നു</string>
+    <string name="pfa_badge_good">കുഴപ്പമില്ല</string>
+    <string name="pfa_badge_caution">ശ്രദ്ധിക്കുക</string>
+    <string name="pfa_badge_unwell">സുഖമില്ല</string>
+
+    <!-- Q3 Pain Options & Badges -->
+    <string name="pfa_pain_none">വേദനയില്ല</string>
+    <string name="pfa_pain_mild">ചെറിയ വേദന</string>
+    <string name="pfa_pain_moderate">ഇടത്തരം വേദന</string>
+    <string name="pfa_pain_severe">കഠിനമായ വേദന</string>
+    <string name="pfa_badge_none">വേദനയില്ല</string>
+    <string name="pfa_badge_mild">കുറവ്</string>
+    <string name="pfa_badge_moderate">ഇടത്തരം</string>
+    <string name="pfa_badge_urgent">അടിയന്തിരം</string>
+
+    <!-- Q4 & Q5 Choices -->
+    <string name="pfa_ans_yes">അതെ</string>
+    <string name="pfa_ans_no">ഇല്ല</string>
+    <string name="pfa_ans_not_sure">ഉറപ്പില്ല</string>
+    <string name="pfa_badge_im_okay">കുഴപ്പമില്ല</string>
+    <string name="pfa_badge_get_help">സഹായം തേടുക</string>
+
+    <!-- Post-Fall Navigation & Buttons -->
+    <string name="pfa_btn_previous">പിന്നോട്ട്</string>
+    <string name="pfa_btn_skip">ഒഴിവാക്കുക</string>
+    <string name="pfa_btn_next">അടുത്ത ചോദ്യം</string>
+    <string name="pfa_btn_finish">പരിശോധന പൂർത്തിയാക്കുക</string>
+    <string name="pfa_false_alarm_title">തെറ്റായ അലാറം സ്ഥിരീകരണം</string>
+    <string name="pfa_btn_done_safe">പൂർത്തിയായി — ഞാൻ സുരക്ഷിതനാണ്</string>
+    <string name="pfa_btn_check_health_anyway">ആരോഗ്യാവസ്ഥ പരിശോധിക്കുക</string>
+    <string name="pfa_btn_change_answer">ഉത്തരം മാറ്റുക</string>
+
+    <!-- Post-Fall Health Triage Result -->
+    <string name="pfa_result_title">ആരോഗ്യ പരിശോധനാ ഫലം</string>
+    <string name="pfa_tier_urgent">അടിയന്തിരം — ഉടൻ സഹായം തേടുക</string>
+    <string name="pfa_tier_caution">ദയവായി വിശ്രമിക്കുകയും നിരീക്ഷിക്കുകയും ചെയ്യുക</string>
+    <string name="pfa_tier_low_risk">സാവധാനം ചലിക്കുക, സുഖം നിരീക്ഷിക്കുക</string>
+    <string name="pfa_btn_call_emergency">അത്യാഹിത വിഭാഗത്തെ വിളിക്കുക (%1$s)</string>
+    <string name="pfa_btn_alert_contact">വിശ്വസ്ത കോൺടാക്റ്റിനെ അറിയിക്കുക</string>
+    <string name="pfa_btn_done">പൂർത്തിയായി</string>
+    <string name="pfa_evaluating">മെഡിക്കൽ ഐഡിയുമായി മറുപടികൾ ഒത്തുനോക്കുന്നു…</string>
+
+    <!-- Medical ID Sheet -->
+    <string name="med_id_full_name">പൂർണ്ണമായ പേര് (ഓപ്ഷണൽ)</string>
+    <string name="med_id_dob">ജനനത്തീയതി (ഉദാ: 1952-04-15)</string>
+    <string name="med_id_age">പ്രായം (ഉദാ: 72)</string>
+    <string name="med_id_blood_type">രക്തഗ്രൂപ്പ്</string>
+    <string name="med_id_known_conditions">നിലവിലുള്ള അസുഖങ്ങൾ</string>
+    <string name="med_id_add_condition">മറ്റൊരു അസുഖം ചേർക്കുക</string>
+    <string name="med_id_medications">കഴിക്കുന്ന മരുന്നുകൾ</string>
+    <string name="med_id_add_medication">മറ്റൊരു മരുന്ന് ചേർക്കുക</string>
+    <string name="med_id_allergies">അലർജികൾ</string>
+    <string name="med_id_add_allergy">മറ്റ് അലർജി ചേർക്കുക</string>
+    <string name="med_id_mobility_history">ചലന സഹായങ്ങൾ അല്ലെങ്കിൽ മുൻ വീഴ്ച ചരിത്രം</string>
+    <string name="med_id_notes">ഡോക്ടർ അല്ലെങ്കിൽ റെസ്പോണ്ടർ കുറിപ്പുകൾ (ഓപ്ഷണൽ)</string>
+    <string name="med_id_save">മെഡിക്കൽ ഐഡി സംരക്ഷിക്കുക</string>
+
+    <!-- Common Action Buttons & Tooltips -->
+    <string name="action_enable">പ്രവർത്തനക്ഷമമാക്കുക</string>
+    <string name="action_open">തുറക്കുക</string>
+    <string name="action_map">മാപ്പ്</string>
+    <string name="action_check_on_them">ഞാൻ അന്വേഷിക്കാം</string>
+    <string name="action_accept">സ്വീകരിക്കുക</string>
+    <string name="action_invite">ക്ഷണിക്കുക</string>
+    <string name="action_refresh">പുതുക്കുക</string>
+    <string name="action_link_account">അക്കൗണ്ട് ബന്ധിപ്പിക്കുക</string>
+    <string name="action_remove">നീക്കം ചെയ്യുക</string>
+    <string name="tt_show_qr">എന്റെ സ്വകാര്യ ക്യുആർ കോഡ് കാണിക്കുക</string>
+    <string name="tt_scan_qr">മറ്റൊരു ഉപയോക്താവിന്റെ ക്യുആർ കോഡ് സ്കാൻ ചെയ്യുക</string>
+</resources>

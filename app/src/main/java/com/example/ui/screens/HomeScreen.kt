@@ -34,19 +34,29 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.MedicalInformation
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -78,9 +88,18 @@ import com.example.domain.DeliveryConfigStatus
 import com.example.domain.GoogleChatAlertConfig
 import com.example.domain.GpsLocationSnapshot
 import com.example.domain.IncomingRecipientAlert
+import com.example.domain.MedicalIdProfile
+import com.example.domain.ModelComparisonReport
+import com.example.domain.ModelReadinessStatus
 import com.example.domain.MonitoringState
 import com.example.domain.MotionFeatures
+import com.example.domain.PersonalLearningEventStatus
+import com.example.domain.PersonalLearningExample
+import com.example.domain.PersonalLearningStage
+import com.example.domain.PersonalMovementProfile
+import com.example.domain.SosAlertOutcomeState
 import com.example.domain.SosAudioStatus
+import com.example.domain.SosLearningSourceType
 import com.example.domain.SosWorkflowState
 import com.example.domain.TrustedContact
 import com.example.domain.TrustedContactRequestItem
@@ -92,6 +111,9 @@ import com.example.ui.components.SoloSignalLogo
 import com.example.ui.components.SectionEyebrow
 import com.example.ui.components.StatusPillBadge
 import com.example.ui.theme.CardSurfaceWhite
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import com.example.ui.theme.CoralSoftSurface
 import com.example.ui.theme.CoralUrgentHighlight
 import com.example.ui.theme.DeepCharcoal
@@ -116,6 +138,7 @@ import kotlin.math.sqrt
 @Composable
 fun HomeScreen(
     monitoringState: MonitoringState,
+    realMonitoringStatus: com.example.sensor.SafetyMonitoringController.RealMonitoringServiceStatus = com.example.sensor.SafetyMonitoringController.RealMonitoringServiceStatus.MONITORING_PAUSED,
     latestFeatures: MotionFeatures,
     recentMagnitudes: List<Float>,
     trustedContact: TrustedContact,
@@ -132,6 +155,7 @@ fun HomeScreen(
     onToggleMonitoring: () -> Unit,
     onRunSyntheticTrace: (SyntheticSensorTraces.TraceType) -> Unit,
     onSendTestAlert: () -> Unit,
+    onTriggerTestIncident: () -> Unit = {},
     onRefreshLocation: () -> Unit,
     onAcknowledgeIncomingAlert: (String) -> Unit,
     onOpenRecipientAlert: (IncomingRecipientAlert) -> Unit,
@@ -145,7 +169,18 @@ fun HomeScreen(
     onCancelEmergencyEscalation: () -> Unit = {},
     sosWorkflowState: SosWorkflowState = SosWorkflowState.IDLE,
     sosAudioStatus: SosAudioStatus = SosAudioStatus.DISABLED,
-    sosAudioBufferedSeconds: Double = 0.0
+    sosAudioBufferedSeconds: Double = 0.0,
+    modelComparisonReport: ModelComparisonReport? = null,
+    onRunModelBenchmark: () -> Unit = {},
+    medicalIdProfile: MedicalIdProfile = MedicalIdProfile(),
+    onStartPostFallAssessment: () -> Unit = {},
+    onOpenMedicalId: () -> Unit = {},
+    personalMovementProfile: PersonalMovementProfile = PersonalMovementProfile(),
+    personalLearningExamples: List<PersonalLearningExample> = emptyList(),
+    onTogglePersonalisationEnabled: (Boolean) -> Unit = {},
+    onResetPersonalLearningToGeneral: () -> Unit = {},
+    onDeletePersonalLearningData: () -> Unit = {},
+    onVerifySosLearningEvent: (alertId: String, linkedEventId: String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -210,6 +245,14 @@ fun HomeScreen(
             "No response (Alert active)" to CoralSoftSurface
         deliveryStatus == DeliveryConfigStatus.DELIVERED_TO_RECIPIENT ->
             "Delivered" to MintSoftSurface
+        deliveryStatus == DeliveryConfigStatus.NOTIFICATION_SENT ->
+            "Notification sent" to MintSoftSurface
+        deliveryStatus == DeliveryConfigStatus.ALERT_CREATED ->
+            "Alert created" to SkyInfoSurface
+        deliveryStatus == DeliveryConfigStatus.DELIVERY_UNKNOWN ->
+            "Delivery unknown" to LavenderSoftSurface
+        deliveryStatus == DeliveryConfigStatus.NOTIFICATION_PERMISSION_MISSING ->
+            "Notification permission missing" to CoralSoftSurface
         monitoringState == MonitoringState.ALERT_SENT ||
             deliveryStatus == DeliveryConfigStatus.REQUEST_ACCEPTED ||
             deliveryStatus == DeliveryConfigStatus.EMAIL_SENT ||
@@ -342,7 +385,7 @@ fun HomeScreen(
                                 .defaultMinSize(minHeight = 48.dp)
                                 .testTag("enable_alert_notifications_button")
                         ) {
-                            Text("Enable", color = Color.White, maxLines = 1, softWrap = false)
+                            Text(stringResource(R.string.action_enable), color = Color.White, maxLines = 1, softWrap = false)
                         }
                     }
                 }
@@ -367,17 +410,21 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         SectionEyebrow(
-                            text = if (activeUnacknowledgedAlert.isTestAlert) "TEST ALERT" else "EMERGENCY ALERT",
+                            text = if (activeUnacknowledgedAlert.isTestAlert) "TEST INCIDENT ALERT" else "EMERGENCY ALERT",
                             modifier = Modifier.weight(1f)
                         )
                         StatusPillBadge(
-                            label = "Urgent",
-                            containerColor = CoralUrgentHighlight
+                            label = if (activeUnacknowledgedAlert.isTestAlert) "Test" else "Urgent",
+                            containerColor = if (activeUnacknowledgedAlert.isTestAlert) SkyInfoSurface else CoralUrgentHighlight
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${activeUnacknowledgedAlert.senderName} needs assistance",
+                        text = if (activeUnacknowledgedAlert.isTestAlert) {
+                            "TEST: ${activeUnacknowledgedAlert.senderName} sent a test alert"
+                        } else {
+                            "${activeUnacknowledgedAlert.senderName} needs assistance"
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = DeepCharcoal,
@@ -411,7 +458,7 @@ fun HomeScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Open", color = Color.White, maxLines = 1, softWrap = false)
+                            Text(stringResource(R.string.action_open), color = Color.White, maxLines = 1, softWrap = false)
                         }
 
                         if (!activeUnacknowledgedAlert.googleMapsUrl.isNullOrBlank()) {
@@ -437,7 +484,7 @@ fun HomeScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Map", maxLines = 1, softWrap = false)
+                                Text(stringResource(R.string.action_map), maxLines = 1, softWrap = false)
                             }
                         }
 
@@ -457,7 +504,7 @@ fun HomeScreen(
                                 .defaultMinSize(minHeight = 48.dp)
                                 .testTag("acknowledge_incoming_alert_button")
                         ) {
-                            Text("I'm checking on them", maxLines = 1, softWrap = false)
+                            Text(stringResource(R.string.action_check_on_them), maxLines = 1, softWrap = false)
                         }
                     }
 
@@ -652,26 +699,23 @@ fun HomeScreen(
             ) {
                 RedGrainySosButton(
                     onClick = {
-                        if (!hasLocationPerm && trustedContact.optionalLocationEnabled) {
-                            locationPermissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
-                            )
-                        }
-                        if (onTriggerSos != {}) {
-                            onTriggerSos()
-                        } else {
-                            onSendTestAlert()
-                        }
+                        onTriggerSos()
                     }
                 )
             }
 
-            // 3. One Compact Safety-Monitoring Status
+            // 3. Compact Safety-Monitoring Status Card with Real Service Diagnostics
+            val isServiceActive = realMonitoringStatus == com.example.sensor.SafetyMonitoringController.RealMonitoringServiceStatus.MONITORING_ACTIVE
+            val isServiceStarting = realMonitoringStatus == com.example.sensor.SafetyMonitoringController.RealMonitoringServiceStatus.STARTING_MONITORING
+            val isButtonInStopState = isMonitoringActive || isServiceActive || isServiceStarting
+
             PastelCard(
-                containerColor = if (isProtected) MintSoftSurface else LavenderSoftSurface,
+                containerColor = when (realMonitoringStatus) {
+                    com.example.sensor.SafetyMonitoringController.RealMonitoringServiceStatus.MONITORING_ACTIVE -> MintSoftSurface
+                    com.example.sensor.SafetyMonitoringController.RealMonitoringServiceStatus.STARTING_MONITORING -> SkyInfoSurface
+                    com.example.sensor.SafetyMonitoringController.RealMonitoringServiceStatus.MONITORING_PAUSED -> LavenderSoftSurface
+                    com.example.sensor.SafetyMonitoringController.RealMonitoringServiceStatus.MONITORING_UNAVAILABLE -> CoralSoftSurface
+                },
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Row(
@@ -683,15 +727,19 @@ fun HomeScreen(
                         SectionEyebrow(text = "FALL MONITORING")
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = when {
-                                isProtected -> "Active in background"
-                                !trustedContact.isValid -> "Add a contact to start"
-                                else -> "Monitoring paused"
-                            },
+                            text = realMonitoringStatus.label,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = DeepCharcoal,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = realMonitoringStatus.detail,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NeutralSlate,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -713,17 +761,47 @@ fun HomeScreen(
                             .testTag("toggle_monitoring_button")
                     ) {
                         Icon(
-                            imageVector = if (isMonitoringActive) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            imageVector = if (isButtonInStopState) Icons.Default.Stop else Icons.Default.PlayArrow,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isMonitoringActive) "Pause" else "Resume",
+                            text = if (isButtonInStopState) "Pause" else "Resume",
                             color = Color.White,
                             maxLines = 1,
                             softWrap = false
+                        )
+                    }
+                }
+
+                // Battery optimization reminder for unrestricted background operation
+                if (!com.example.sensor.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = DeepCharcoal.copy(alpha = 0.08f), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                com.example.sensor.BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.HealthAndSafety,
+                            contentDescription = null,
+                            tint = DeepCharcoal,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Battery saver active: Tap to allow unrestricted background safety",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = DeepCharcoal,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -754,6 +832,151 @@ fun HomeScreen(
                                 color = DeepCharcoal
                             )
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                var showMlDiagnostics by remember { mutableStateOf(false) }
+                val dynamicConfText = latestFeatures.calibratedConfidence?.let {
+                    String.format(java.util.Locale.US, "%.1f%%", it * 100f)
+                } ?: "N/A (Rule Fallback)"
+                val hzText = if (latestFeatures.empiricalSamplingRateHz > 0f) {
+                    String.format(java.util.Locale.US, "%.1f Hz", latestFeatures.empiricalSamplingRateHz)
+                } else {
+                    "50.0 Hz target"
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showMlDiagnostics = !showMlDiagnostics }
+                        .padding(vertical = 4.dp)
+                        .testTag("sensor_debug_panel_toggle"),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "AI Motion: ${latestFeatures.predictedCategory.displayLabel} ($dynamicConfText)",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DeepCharcoal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("home_ml_motion_status_text")
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (showMlDiagnostics) "Hide AI Stats" else "AI Stats ($hzText)",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepCharcoal,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+
+                if (showMlDiagnostics) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CardSurfaceWhite.copy(alpha = 0.85f))
+                            .padding(10.dp)
+                            .testTag("sensor_debug_panel"),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Engine: ${latestFeatures.modelReadiness.label}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = DeepCharcoal
+                            )
+                            StatusPillBadge(
+                                label = if (latestFeatures.isSyntheticSample) "SIMULATED TEST" else "LIVE SENSOR",
+                                containerColor = if (latestFeatures.isSyntheticSample) SkyInfoSurface else MintSoftSurface,
+                                modifier = Modifier.testTag("sensor_debug_source_badge")
+                            )
+                        }
+                        Text(
+                            text = "Accel: ${String.format(java.util.Locale.US, "%.2f", latestFeatures.currentMagnitude)} m/s² (${String.format(java.util.Locale.US, "%.2f", latestFeatures.currentMagnitudeG)}g) • DynPeak: ${String.format(java.util.Locale.US, "%.2f", latestFeatures.peakDynamicAccelerationMs2 / 9.80665f)}g • GyroPeak: ${String.format(java.util.Locale.US, "%.1f", latestFeatures.peakGyroDegPerSec)}°/s",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NeutralSlate,
+                            modifier = Modifier.testTag("sensor_debug_live_values_text")
+                        )
+                        Text(
+                            text = "Phase: ${latestFeatures.detectorPhase} • Threshold: ${String.format(java.util.Locale.US, "%.1f", latestFeatures.effectiveImpactThresholdMs2)} m/s²",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NeutralSlate,
+                            modifier = Modifier.testTag("sensor_debug_phase_text")
+                        )
+                        Text(
+                            text = latestFeatures.lastDecisionReason,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = DeepCharcoal,
+                            modifier = Modifier.testTag("sensor_debug_decision_reason_text")
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { onRunSyntheticTrace(SyntheticSensorTraces.TraceType.FALL_LIKE_IMPACT_STILLNESS) },
+                                shape = RoundedCornerShape(999.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("simulate_fall_trace_button")
+                            ) {
+                                Text(
+                                    text = "Simulate Fall",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = DeepCharcoal,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = onRunModelBenchmark,
+                                shape = RoundedCornerShape(999.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("run_ml_benchmark_button")
+                            ) {
+                                Text(
+                                    text = "Run ML Benchmark",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = DeepCharcoal,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
+                        if (modelComparisonReport != null) {
+                            Text(
+                                text = "Held-Out Benchmark (${modelComparisonReport.heldOutWindowCount} windows): CNN F1=${String.format(java.util.Locale.US, "%.1f%%", modelComparisonReport.cnnHybridMetrics.f1Score * 100f)} (FPR=${String.format(java.util.Locale.US, "%.1f%%", modelComparisonReport.cnnHybridMetrics.falsePositiveRate * 100f)}) vs RF Baseline F1=${String.format(java.util.Locale.US, "%.1f%%", modelComparisonReport.randomForestBaselineMetrics.f1Score * 100f)} vs 3-Phase Rule F1=${String.format(java.util.Locale.US, "%.1f%%", modelComparisonReport.ruleBasedMetrics.f1Score * 100f)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = DeepCharcoal,
+                                modifier = Modifier.testTag("ml_benchmark_summary_text")
+                            )
+                        }
+                        HorizontalDivider(color = DeepCharcoal.copy(alpha = 0.12f))
+                        Text(
+                            text = "Layer 2/3 Personal Learning: ${personalMovementProfile.learningStage.displayLabel} • ${personalMovementProfile.formatEffectiveAdjustmentsSummary()}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DeepCharcoal,
+                            modifier = Modifier.testTag("ai_lab_personal_learning_summary_text")
+                        )
                     }
                 }
             }
@@ -885,6 +1108,729 @@ fun HomeScreen(
                                 softWrap = false
                             )
                         }
+                    }
+                }
+
+                if (trustedContact.isValid) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { onRunSyntheticTrace(SyntheticSensorTraces.TraceType.FALL_LIKE_IMPACT_STILLNESS) },
+                            shape = RoundedCornerShape(999.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .defaultMinSize(minHeight = 44.dp)
+                                .testTag("test_fall_detection_button")
+                        ) {
+                            Text(
+                                text = "Test fall detection",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = onTriggerTestIncident,
+                            shape = RoundedCornerShape(999.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .defaultMinSize(minHeight = 44.dp)
+                                .testTag("test_incoming_alert_screen_button")
+                        ) {
+                            Text(
+                                text = "Test alert screen",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 5. Post-Fall Health Assessment & Voluntary Medical ID Section
+            PastelCard(
+                contentPadding = PaddingValues(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("home_medical_id_and_assessment_card")
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(LavenderSoftSurface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MedicalInformation,
+                                contentDescription = null,
+                                tint = DeepCharcoal,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            SectionEyebrow(text = "HEALTH CHECK & MEDICAL ID")
+                            Text(
+                                text = if (medicalIdProfile.isConfigured) {
+                                    medicalIdProfile.fullName.ifBlank { "Medical ID Configured" }
+                                } else {
+                                    "Post-Fall Assessment & Medical ID"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = DeepCharcoal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (medicalIdProfile.isConfigured) {
+                                    buildString {
+                                        if (medicalIdProfile.bloodType.isNotBlank()) {
+                                            append("Blood: ${medicalIdProfile.bloodType} • ")
+                                        }
+                                        append("${medicalIdProfile.knownConditions.size} condition(s) • ${medicalIdProfile.medications.size} med(s)")
+                                    }
+                                } else {
+                                    "Add voluntary Medical ID for AI post-fall symptom cross-checks"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NeutralSlate,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    StatusPillBadge(
+                        label = if (medicalIdProfile.isConfigured) "Saved" else "Optional",
+                        containerColor = if (medicalIdProfile.isConfigured) MintSoftSurface else LavenderSoftSurface,
+                        modifier = Modifier.testTag("home_medical_id_status_badge")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onOpenMedicalId,
+                        shape = RoundedCornerShape(999.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag("home_open_medical_id_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MedicalInformation,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (medicalIdProfile.isConfigured) "Medical ID" else "Add Medical ID",
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+
+                    Button(
+                        onClick = onStartPostFallAssessment,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DeepCharcoal,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(999.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag("home_start_post_fall_check_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.HealthAndSafety,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Health Check",
+                            color = Color.White,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
+
+            // 6. Personal Learning — Hybrid AI Personalisation & Continuous Learning Section
+            PersonalLearningDashboardCard(
+                profile = personalMovementProfile,
+                examples = personalLearningExamples,
+                onTogglePersonalisationEnabled = onTogglePersonalisationEnabled,
+                onResetToGeneralModel = onResetPersonalLearningToGeneral,
+                onDeleteLearningData = onDeletePersonalLearningData,
+                onVerifySosLearningEvent = onVerifySosLearningEvent
+            )
+        }
+    }
+}
+
+@Composable
+private fun PersonalLearningDashboardCard(
+    profile: PersonalMovementProfile,
+    examples: List<PersonalLearningExample>,
+    onTogglePersonalisationEnabled: (Boolean) -> Unit,
+    onResetToGeneralModel: () -> Unit,
+    onDeleteLearningData: () -> Unit,
+    onVerifySosLearningEvent: (alertId: String, linkedEventId: String) -> Unit = { _, _ -> }
+) {
+    var showDetails by remember { mutableStateOf(false) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
+    val stageBadgeColor = when (profile.learningStage) {
+        PersonalLearningStage.PERSONALISED -> MintSoftSurface
+        PersonalLearningStage.LEARNING -> SkyInfoSurface
+        PersonalLearningStage.GETTING_STARTED -> LavenderSoftSurface
+    }
+
+    val lastUpdatedFormatted = remember(profile.lastUpdatedEpochMillis) {
+        if (profile.lastUpdatedEpochMillis <= 0L) {
+            "Not yet updated"
+        } else {
+            try {
+                SimpleDateFormat("MMM d, HH:mm", Locale.US).format(Date(profile.lastUpdatedEpochMillis))
+            } catch (_: Exception) {
+                "Recently updated"
+            }
+        }
+    }
+
+    if (showResetConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Reset to General Model?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DeepCharcoal
+                )
+            },
+            text = {
+                Text(
+                    text = "This restores the original pre-trained fall detection model baseline and clears your personal calibration adjustments.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NeutralSlate
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showResetConfirmDialog = false
+                        onResetToGeneralModel()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DeepCharcoal,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(999.dp),
+                    modifier = Modifier.testTag("confirm_reset_personal_learning_button")
+                ) {
+                    Text("Reset to General Model", color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showResetConfirmDialog = false },
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text("Cancel", color = DeepCharcoal)
+                }
+            },
+            containerColor = CardSurfaceWhite
+        )
+    }
+
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Delete Personal Learning Data?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DeepCharcoal
+                )
+            },
+            text = {
+                Text(
+                    text = "Permanently delete all on-device movement feedback examples and personal movement profile data? The app will continue protecting you using the general pre-trained model.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NeutralSlate
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDeleteLearningData()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CoralUrgentHighlight,
+                        contentColor = DeepCharcoal
+                    ),
+                    shape = RoundedCornerShape(999.dp),
+                    modifier = Modifier.testTag("confirm_delete_personal_learning_button")
+                ) {
+                    Text("Delete Data", fontWeight = FontWeight.Bold, color = DeepCharcoal)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDeleteConfirmDialog = false },
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text("Cancel", color = DeepCharcoal)
+                }
+            },
+            containerColor = CardSurfaceWhite
+        )
+    }
+
+    PastelCard(
+        contentPadding = PaddingValues(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("home_personal_learning_card")
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(stageBadgeColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = DeepCharcoal,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    SectionEyebrow(text = "PERSONAL LEARNING")
+                    Text(
+                        text = profile.learningStage.displayLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepCharcoal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("personal_learning_stage_title")
+                    )
+                    Text(
+                        text = "Last update: $lastUpdatedFormatted",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NeutralSlate,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("personal_learning_last_updated_text")
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            StatusPillBadge(
+                label = profile.learningStage.displayLabel,
+                containerColor = stageBadgeColor,
+                modifier = Modifier.testTag("personal_learning_status_badge")
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Progress toward minimum 5 confirmed examples
+        val progressFraction = (profile.totalConfirmedExamples.toFloat() /
+            PersonalLearningStage.MIN_CONFIRMED_EXAMPLES_FOR_PERSONALISATION.toFloat()).coerceIn(0f, 1f)
+        LinearProgressIndicator(
+            progress = { progressFraction },
+            color = DeepCharcoal,
+            trackColor = DeepCharcoal.copy(alpha = 0.12f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .testTag("personal_learning_progress_bar")
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // 3 Key Metrics Row: Confirmed Normal | Confirmed Falls | Uncertain Excluded
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Surface(
+                color = WarmMistBackground,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("personal_learning_normal_count_box")
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = profile.confirmedNormalCount.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DeepCharcoal
+                    )
+                    Text(
+                        text = "Normal movement",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeutralSlate,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Surface(
+                color = WarmMistBackground,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("personal_learning_fall_count_box")
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = profile.confirmedFallCount.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DeepCharcoal
+                    )
+                    Text(
+                        text = "Reported falls",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeutralSlate,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Surface(
+                color = WarmMistBackground,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("personal_learning_excluded_count_box")
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = profile.totalExcludedExamples.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DeepCharcoal
+                    )
+                    Text(
+                        text = "Uncertain excluded",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeutralSlate,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = profile.formatEffectiveAdjustmentsSummary(),
+            style = MaterialTheme.typography.bodySmall,
+            color = DeepCharcoal,
+            modifier = Modifier.testTag("personal_learning_summary_note")
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OutlinedButton(
+                onClick = { showDetails = !showDetails },
+                shape = RoundedCornerShape(999.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .defaultMinSize(minHeight = 48.dp)
+                    .testTag("personal_learning_toggle_details_button")
+            ) {
+                Text(
+                    text = if (showDetails) "Hide Details" else "View & Manage",
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+
+            if (profile.totalConfirmedExamples > 0 || profile.totalExcludedExamples > 0) {
+                OutlinedButton(
+                    onClick = { showResetConfirmDialog = true },
+                    shape = RoundedCornerShape(999.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag("personal_learning_reset_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RestartAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Reset Model",
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+            }
+        }
+
+        if (showDetails) {
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = DeepCharcoal.copy(alpha = 0.12f))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("personal_learning_details_section"),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Use Personal Movement Calibration",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepCharcoal
+                        )
+                        Text(
+                            text = "Combines the general model with your movement profile once 5 confirmed examples are collected.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NeutralSlate
+                        )
+                    }
+                    Switch(
+                        checked = profile.personalisationEnabled,
+                        onCheckedChange = onTogglePersonalisationEnabled,
+                        modifier = Modifier.testTag("personal_learning_enable_switch")
+                    )
+                }
+
+                Text(
+                    text = "Pattern Breakdown: Phone drops (${profile.phoneDropExampleCount}) • Sitting (${profile.sittingExampleCount}) • Normal movement (${profile.walkingNormalExampleCount}) • False alarms (${profile.falseDetectionExampleCount}) • Suppressed false triggers (${profile.suppressedFalseAlarmsCount})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = DeepCharcoal
+                )
+
+                Text(
+                    text = "SOS & Alert History: Awaiting feedback (${profile.awaitingFeedbackSosCount}) • Validated SOS (${profile.validatedSosEventCount}) • Contact acknowledged (${profile.acknowledgedAlertCount}) • Manual SOS (${profile.manualSosEventCount})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = DeepCharcoal,
+                    modifier = Modifier.testTag("personal_learning_sos_summary_text")
+                )
+
+                if (examples.isNotEmpty()) {
+                    Text(
+                        text = "Event-Based Learning History (${examples.size}):",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepCharcoal
+                    )
+                    examples.take(6).forEach { ex ->
+                        val statusBadgeColor = when (ex.eventStatus) {
+                            PersonalLearningEventStatus.AWAITING_FEEDBACK -> SkyInfoSurface
+                            PersonalLearningEventStatus.CONFIRMED_MOVEMENT_PATTERN -> MintSoftSurface
+                            PersonalLearningEventStatus.MANUAL_SOS_NOT_A_FALL_LABEL -> LavenderSoftSurface
+                            PersonalLearningEventStatus.EXCLUDED_FROM_FALL_LEARNING -> CoralSoftSurface
+                        }
+                        val headlineText = when {
+                            ex.sourceType == SosLearningSourceType.MANUAL_SOS ->
+                                "Manual SOS — not a fall label"
+                            ex.eventStatus == PersonalLearningEventStatus.AWAITING_FEEDBACK ->
+                                "Automatic SOS — Awaiting feedback"
+                            else ->
+                                "${ex.sourceType.shortLabel}: ${ex.incidentVerification.simpleLabel} → ${ex.learningLabel.shortLabel}"
+                        }
+                        val detailLine = buildString {
+                            if (ex.sourceType != SosLearningSourceType.MANUAL_SOS) {
+                                append("Peak ${String.format(Locale.US, "%.1f", ex.peakTotalAccelG)}g")
+                                append(" • ${ex.detectionMethod}")
+                                if (ex.physicsFallbackInvolved) {
+                                    append(" (physics fallback)")
+                                }
+                                if (ex.baseModelConfidence != null) {
+                                    append(" • CNN ${String.format(Locale.US, "%.0f%%", ex.baseModelConfidence * 100f)}")
+                                }
+                            } else {
+                                append("User-initiated SOS button")
+                            }
+                            if (ex.alertOutcome != SosAlertOutcomeState.NONE) {
+                                append(" • ${ex.alertOutcome.shortLabel}")
+                            }
+                            if (ex.recipientAcknowledged) {
+                                val ackWho = ex.acknowledgedByName.ifBlank { "Contact" }
+                                append(" ($ackWho acknowledged — not a fall label)")
+                            }
+                        }
+
+                        Surface(
+                            color = WarmMistBackground,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("personal_learning_history_item_${ex.exampleId}")
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = headlineText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = DeepCharcoal,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    StatusPillBadge(
+                                        label = ex.eventStatus.displayLabel,
+                                        containerColor = statusBadgeColor
+                                    )
+                                }
+                                Text(
+                                    text = detailLine,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NeutralSlate
+                                )
+                                if (ex.isAwaitingUserFeedback) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            onVerifySosLearningEvent(ex.alertId, ex.linkedEventId)
+                                        },
+                                        shape = RoundedCornerShape(999.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                        modifier = Modifier
+                                            .defaultMinSize(minHeight = 36.dp)
+                                            .testTag("verify_sos_event_button_${ex.alertId.ifBlank { ex.linkedEventId }}")
+                                    ) {
+                                        Text(
+                                            text = "Complete Feedback Questionnaire",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = DeepCharcoal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    text = "Privacy & Safety Notice: Personal learning stores movement feature summaries locally on this phone only. Everyday movement recordings and audio are never uploaded for training. Alert delivery or contact acknowledgement never counts as a confirmed fall without your feedback.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NeutralSlate
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showResetConfirmDialog = true },
+                        shape = RoundedCornerShape(999.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 44.dp)
+                            .testTag("personal_learning_detail_reset_button")
+                    ) {
+                        Text("Reset to General", maxLines = 1, softWrap = false)
+                    }
+                    OutlinedButton(
+                        onClick = { showDeleteConfirmDialog = true },
+                        shape = RoundedCornerShape(999.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 44.dp)
+                            .testTag("personal_learning_delete_data_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = null,
+                            tint = CoralUrgentHighlight,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Delete Data", color = CoralUrgentHighlight, maxLines = 1, softWrap = false)
                     }
                 }
             }

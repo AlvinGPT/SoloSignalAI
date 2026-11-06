@@ -15,9 +15,11 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -169,8 +171,22 @@ class AlertDeliveryGateway(
                 enableVibration(true)
             }
 
+            val emergencyFullscreenChannel = NotificationChannel(
+                CHANNEL_EMERGENCY_FULLSCREEN,
+                "Emergency Full-Screen Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Critical full-screen emergency alert interface displayed when a fall is detected and countdown finishes without user response"
+                enableVibration(true)
+                vibrationPattern = EMERGENCY_VIBRATION_PATTERN
+                setSound(buzzerSoundUri, emergencyAudioAttributes)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                setShowBadge(true)
+                enableLights(true)
+            }
+
             notificationManager.createNotificationChannels(
-                listOf(checkInChannel, recipientBuzzerChannel, dispatchChannel)
+                listOf(checkInChannel, recipientBuzzerChannel, dispatchChannel, emergencyFullscreenChannel)
             )
         }
     }
@@ -185,7 +201,8 @@ class AlertDeliveryGateway(
         locationDiagnostics: String? = null,
         audioClip: SosAudioClipMetadata? = null,
         audioStatusKey: String = "DISABLED",
-        audioStatusNote: String? = null
+        audioStatusNote: String? = null,
+        medicalIdSummary: String? = null
     ): AlertMessagePayload {
         val formatter = SimpleDateFormat("MMM d, yyyy 'at' h:mm:ss a z", Locale.getDefault())
         val timeStr = formatter.format(Date(eventSummary?.detectedAtEpochMillis ?: System.currentTimeMillis()))
@@ -236,6 +253,10 @@ class AlertDeliveryGateway(
                 if (locationSnapshot != null) {
                     appendLine("Open Map: ${locationSnapshot.googleMapsUrl}")
                 }
+                if (!medicalIdSummary.isNullOrBlank()) {
+                    appendLine()
+                    appendLine(medicalIdSummary)
+                }
                 appendLine("No emergency action is needed.")
             }.trim()
         } else {
@@ -243,8 +264,7 @@ class AlertDeliveryGateway(
                 appendLine("SOS ALERT — Possible Fall Detected")
                 appendLine("Hello $recipientName,")
                 appendLine()
-                appendLine("SoloSignal AI has detected a possible fall involving the user configured for this alert ($senderName).")
-                appendLine("The user did not respond to the in-app confirmation prompt before the countdown expired.")
+                appendLine("SoloSignal AI has detected a possible fall or urgent post-fall warning involving the user configured for this alert ($senderName).")
                 appendLine("Outcome: $triggerReason.")
                 appendLine()
                 appendLine("Alert time: $timeStr")
@@ -261,6 +281,10 @@ class AlertDeliveryGateway(
                 appendLine("Audio recording: $resolvedAudioNote")
                 if (!audioClip?.downloadUrl.isNullOrBlank()) {
                     appendLine("Audio Download Link: ${audioClip?.downloadUrl}")
+                }
+                if (!medicalIdSummary.isNullOrBlank()) {
+                    appendLine()
+                    appendLine(medicalIdSummary)
                 }
                 appendLine()
                 appendLine("Please try to contact the user ($senderName) and assess whether assistance is needed.")
@@ -298,13 +322,18 @@ class AlertDeliveryGateway(
         ensureChannels()
         if (!hasNotificationPermission()) return
 
+        val eventId = eventSummary?.eventId?.ifBlank { "checkin_${System.currentTimeMillis()}" }
+            ?: "checkin_${System.currentTimeMillis()}"
         val openAppIntent = Intent(appContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            action = "$ACTION_VIEW_CHECK_IN.$eventId"
+            data = Uri.parse("solosignal://incident/$eventId?type=checkin")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(EXTRA_OPEN_CHECK_IN, true)
+            putExtra(EXTRA_INCOMING_ALERT_ID, eventId)
         }
         val contentPendingIntent = PendingIntent.getActivity(
             appContext,
-            100,
+            eventId.hashCode(),
             openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -360,6 +389,129 @@ class AlertDeliveryGateway(
 
     fun cancelCheckInNotification() {
         notificationManager.cancel(NOTIFICATION_ID_CHECK_IN)
+    }
+
+    /**
+     * Momentarily acquires a screen-bright wake lock to wake the hardware display when an emergency triggers.
+     */
+    fun wakeUpScreen() {
+        try {
+            val powerManager = appContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            @Suppress("DEPRECATION")
+            val wakeLock = powerManager?.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                    PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                    PowerManager.ON_AFTER_RELEASE,
+                "solosignal:emergency_full_screen_wake"
+            )
+            wakeLock?.acquire(10_000L)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to acquire wake lock: ${e.message}")
+        }
+    }
+
+    /**
+     * Navigates to the system screen to grant full-screen intent special access on Android 14+.
+     */
+    fun openFullScreenIntentSettings(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            } catch (_: Exception) {
+                try {
+                    val fallback = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(fallback)
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
+
+    /**
+     * Posts a critical Full-Screen Intent emergency notification when a fall countdown expires without user response
+     * or when immediate SOS is requested. Wakes display and brings the emergency screen to the foreground over the lock screen.
+     */
+    fun postEmergencyTriggeredFullScreenNotification(
+        alertId: String,
+        eventSummary: CandidateEventSummary?,
+        contact: TrustedContact
+    ): Boolean {
+        ensureChannels()
+        wakeUpScreen()
+        if (!hasNotificationPermission()) return false
+
+        val cleanAlertId = alertId.trim().ifBlank { "emergency_${System.currentTimeMillis()}" }
+        val openAppIntent = Intent(appContext, MainActivity::class.java).apply {
+            action = "$ACTION_VIEW_ACTIVE_EMERGENCY.$cleanAlertId"
+            data = Uri.parse("solosignal://incident/$cleanAlertId?type=emergency_fullscreen")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_OPEN_EMERGENCY_ACTIVE, true)
+            putExtra(EXTRA_INCOMING_ALERT_ID, cleanAlertId)
+        }
+        val contentPendingIntent = PendingIntent.getActivity(
+            appContext,
+            cleanAlertId.hashCode(),
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val imOkayIntent = Intent(appContext, CheckInActionReceiver::class.java).apply {
+            action = CheckInActionReceiver.ACTION_IM_OKAY
+        }
+        val imOkayPending = PendingIntent.getBroadcast(
+            appContext,
+            201,
+            imOkayIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = "EMERGENCY: Possible Fall Detected"
+        val recipientName = contact.contactName.trim().ifBlank { "Emergency Contact" }
+        val body = "Emergency SOS active — alert dispatched to $recipientName. Tap I'm OK if you are safe."
+
+        val channelId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CHANNEL_EMERGENCY_FULLSCREEN
+        } else {
+            CHANNEL_CHECK_IN_URGENT
+        }
+
+        val notification = NotificationCompat.Builder(appContext, channelId)
+            .setSmallIcon(R.drawable.ic_solosignal_logo)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$body\n\n${eventSummary?.summaryNote ?: ""}"))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setContentIntent(contentPendingIntent)
+            .setFullScreenIntent(contentPendingIntent, true)
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                appContext.getString(R.string.action_im_okay),
+                imOkayPending
+            )
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID_EMERGENCY_FULLSCREEN, notification)
+
+        // Continuous audible buzzer and vibration until cancelled
+        playEmergencyAlertSoundIfPermitted(cleanAlertId)
+        vibrateForEmergencyPopUp(cleanAlertId)
+
+        return true
+    }
+
+    fun cancelEmergencyFullScreenNotification() {
+        notificationManager.cancel(NOTIFICATION_ID_EMERGENCY_FULLSCREEN)
     }
 
     /**
@@ -423,6 +575,7 @@ class AlertDeliveryGateway(
 
         val openAppIntent = Intent(appContext, MainActivity::class.java).apply {
             action = "$ACTION_VIEW_INCOMING_EMERGENCY.$alertKey"
+            data = Uri.parse("solosignal://incident/$alertKey")
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(EXTRA_INCOMING_ALERT_ID, alertKey)
             putExtra(EXTRA_INCOMING_SENDER_NAME, senderDisplay)
@@ -461,12 +614,15 @@ class AlertDeliveryGateway(
         )
 
         val title = if (alert.isTestAlert) {
-            "SOS ALERT (TEST) — $senderDisplay needs help"
+            "TEST INCIDENT ALERT — $senderDisplay"
         } else {
             "SOS ALERT — $senderDisplay needs help"
         }
 
         val summaryLine = buildString {
+            if (alert.isTestAlert) {
+                append("[TEST] ")
+            }
             append(alertTypeLabel)
             if (alert.locationSummary.isNotBlank()) {
                 append(" • ")
@@ -489,7 +645,7 @@ class AlertDeliveryGateway(
             .setVibrate(EMERGENCY_VIBRATION_PATTERN)
             .setAutoCancel(true)
             .setContentIntent(contentPendingIntent)
-            .setFullScreenIntent(contentPendingIntent, true)
+            .setFullScreenIntent(contentPendingIntent, false)
             .addAction(
                 android.R.drawable.ic_dialog_alert,
                 ACTION_LABEL_VIEW_EMERGENCY,
@@ -1014,11 +1170,17 @@ class AlertDeliveryGateway(
         if (!hasNotificationPermission()) return false
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            action = "$ACTION_VIEW_INCOMING_EMERGENCY.${payload.alertId}"
+            data = Uri.parse("solosignal://incident/${payload.alertId}")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_INCOMING_ALERT_ID, payload.alertId)
+            putExtra(EXTRA_INCOMING_IS_TEST, payload.isTestAlert)
+            putExtra(EXTRA_INCOMING_SENDER_NAME, payload.userDisplayName)
+            putExtra(EXTRA_INCOMING_TRIGGER_REASON, payload.subjectLine)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
-            200,
+            payload.alertId.hashCode(),
             openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -1054,12 +1216,15 @@ class AlertDeliveryGateway(
 
     companion object {
         const val CHANNEL_CHECK_IN_URGENT = "solosignal_checkin_urgent"
+        const val CHANNEL_EMERGENCY_FULLSCREEN = "solosignal_emergency_fullscreen_v1"
         const val CHANNEL_RECIPIENT_BUZZER = "solosignal_recipient_emergency_buzzer_v1"
         const val CHANNEL_RECIPIENT_POPUP = CHANNEL_RECIPIENT_BUZZER
         const val CHANNEL_ALERT_DISPATCH = "solosignal_alert_dispatch"
         const val ACTION_LABEL_VIEW_EMERGENCY = "View Emergency"
         const val ACTION_LABEL_CHECKING_ON_THEM = "I'm checking on them"
         const val ACTION_VIEW_INCOMING_EMERGENCY = "com.example.solosignal.ACTION_VIEW_INCOMING_EMERGENCY"
+        const val ACTION_VIEW_CHECK_IN = "com.example.solosignal.ACTION_VIEW_CHECK_IN"
+        const val ACTION_VIEW_ACTIVE_EMERGENCY = "com.example.solosignal.ACTION_VIEW_ACTIVE_EMERGENCY"
         const val MAX_BUZZER_DURATION_MILLIS = 25_000L
         private const val TAG = "AlertDeliveryGateway"
 
@@ -1265,9 +1430,11 @@ class AlertDeliveryGateway(
         const val NOTIFICATION_ID_CHECK_IN = 3101
         const val NOTIFICATION_ID_REAL_ALERT = 3102
         const val NOTIFICATION_ID_TEST_ALERT = 3103
+        const val NOTIFICATION_ID_EMERGENCY_FULLSCREEN = 3104
         const val NOTIFICATION_ID_RECIPIENT_POPUP_BASE = 4000
 
         const val EXTRA_OPEN_CHECK_IN = "extra_open_check_in"
+        const val EXTRA_OPEN_EMERGENCY_ACTIVE = "extra_open_emergency_active"
         const val EXTRA_INCOMING_ALERT_ID = "extra_incoming_alert_id"
         const val EXTRA_INCOMING_SENDER_NAME = "extra_incoming_sender_name"
         const val EXTRA_INCOMING_SENDER_EMAIL = "extra_incoming_sender_email"

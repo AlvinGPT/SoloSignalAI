@@ -5,7 +5,13 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -73,6 +80,7 @@ fun CheckInOverlay(
     totalCountdownSeconds: Int = 15,
     candidateSummary: CandidateEventSummary?,
     trustedContact: TrustedContact,
+    isEmergencyTriggered: Boolean = false,
     onConfirmImOkay: () -> Unit,
     onRequestHelpNow: () -> Unit,
     onLocationPermissionGranted: () -> Unit = {},
@@ -113,6 +121,17 @@ fun CheckInOverlay(
         .coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(targetValue = progressTarget, label = "checkin_progress")
 
+    val infiniteTransition = rememberInfiniteTransition(label = "sos_pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -130,14 +149,14 @@ fun CheckInOverlay(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             StatusPillBadge(
-                label = "Possible fall detected",
+                label = if (isEmergencyTriggered) stringResource(R.string.checkin_emergency_sos_active) else stringResource(R.string.checkin_badge_active),
                 containerColor = CoralUrgentHighlight,
-                contentColor = DeepCharcoal,
+                contentColor = if (isEmergencyTriggered) androidx.compose.ui.graphics.Color.White else DeepCharcoal,
                 modifier = Modifier.testTag("checkin_possible_fall_badge")
             )
 
             Text(
-                text = "Are you okay?",
+                text = if (isEmergencyTriggered) stringResource(R.string.checkin_badge_active) else stringResource(R.string.checkin_headline),
                 style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                 color = DeepCharcoal,
                 textAlign = TextAlign.Center,
@@ -145,46 +164,151 @@ fun CheckInOverlay(
             )
 
             Text(
-                text = if (trustedContact.isValid) {
-                    "Sending SOS to ${trustedContact.contactName} in ${countdownRemaining}s unless cancelled."
+                text = if (isEmergencyTriggered) {
+                    if (trustedContact.isValid) {
+                        stringResource(R.string.checkin_dispatched_to_contact, trustedContact.contactName)
+                    } else {
+                        stringResource(R.string.checkin_sos_active_generic)
+                    }
+                } else if (trustedContact.isValid) {
+                    stringResource(R.string.checkin_sending_sos_countdown, trustedContact.contactName, countdownRemaining)
                 } else {
-                    "Tap I'm OK to cancel, or Send SOS Now."
+                    stringResource(R.string.checkin_tap_ok_or_sos)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = NeutralSlate,
                 textAlign = TextAlign.Center
             )
 
-            // Large circular countdown ring
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(136.dp)
-                    .padding(vertical = 2.dp)
-            ) {
-                CircularProgressIndicator(
-                    progress = { 1f },
-                    modifier = Modifier.fillMaxSize(),
-                    color = CoralSoftSurface,
-                    strokeWidth = 10.dp
-                )
-                CircularProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = Modifier.fillMaxSize(),
-                    color = DeepCharcoal,
-                    strokeWidth = 10.dp
-                )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${countdownRemaining}s",
-                        style = MaterialTheme.typography.displayMedium.copy(
-                            fontSize = 38.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = DeepCharcoal,
-                        modifier = Modifier.testTag("countdown_seconds_text")
+            if (isEmergencyTriggered) {
+                // Large accessible red SOS status indicator
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(136.dp)
+                        .padding(vertical = 2.dp)
+                        .graphicsLayer(scaleX = pulseScale, scaleY = pulseScale)
+                        .testTag("emergency_sos_active_indicator")
+                ) {
+                    Surface(
+                        modifier = Modifier.size(136.dp),
+                        shape = CircleShape,
+                        color = CoralUrgentHighlight.copy(alpha = 0.25f)
+                    ) {}
+                    Surface(
+                        modifier = Modifier.size(104.dp),
+                        shape = CircleShape,
+                        color = CoralUrgentHighlight,
+                        shadowElevation = 6.dp
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = "Active Emergency SOS",
+                                tint = androidx.compose.ui.graphics.Color.White,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Text(
+                                text = "SOS",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 2.sp
+                                ),
+                                color = androidx.compose.ui.graphics.Color.White
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Large circular countdown ring
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(136.dp)
+                        .padding(vertical = 2.dp)
+                ) {
+                    CircularProgressIndicator(
+                        progress = { 1f },
+                        modifier = Modifier.fillMaxSize(),
+                        color = CoralSoftSurface,
+                        strokeWidth = 10.dp
                     )
-                    SectionEyebrow(text = "SECONDS")
+                    CircularProgressIndicator(
+                        progress = { animatedProgress },
+                        modifier = Modifier.fillMaxSize(),
+                        color = DeepCharcoal,
+                        strokeWidth = 10.dp
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${countdownRemaining}s",
+                            style = MaterialTheme.typography.displayMedium.copy(
+                                fontSize = 38.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = DeepCharcoal,
+                            modifier = Modifier.testTag("countdown_seconds_text")
+                        )
+                        SectionEyebrow(text = stringResource(R.string.seconds_label))
+                    }
+                }
+            }
+
+            // ML Explainability & Why Check-In Initiated summary card
+            val explainability = candidateSummary?.explainabilityRecord
+            if (explainability != null || !candidateSummary?.summaryNote.isNullOrBlank()) {
+                Surface(
+                    color = LavenderSoftSurface,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("checkin_ml_explainability_card")
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        if (explainability != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${explainability.predictedCategory.displayLabel} (${explainability.formatConfidenceBadge()})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DeepCharcoal,
+                                    modifier = Modifier.testTag("checkin_ml_prediction_text")
+                                )
+                                Text(
+                                    text = if (explainability.isUncertain) {
+                                        "${explainability.modelVersion} • Uncertain"
+                                    } else {
+                                        explainability.modelVersion
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NeutralSlate
+                                )
+                            }
+                            Text(
+                                text = explainability.whyCheckInInitiated,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = DeepCharcoal,
+                                modifier = Modifier.testTag("checkin_ml_reason_text")
+                            )
+                        } else if (!candidateSummary?.summaryNote.isNullOrBlank()) {
+                            Text(
+                                text = candidateSummary?.summaryNote.orEmpty(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = DeepCharcoal
+                            )
+                        }
+                    }
                 }
             }
 
@@ -212,7 +336,7 @@ fun CheckInOverlay(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (hasLocationPermission) "GPS location ready" else "Location disabled",
+                                text = if (hasLocationPermission) stringResource(R.string.checkin_gps_ready) else stringResource(R.string.checkin_location_disabled),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
                                 color = DeepCharcoal
@@ -231,7 +355,7 @@ fun CheckInOverlay(
                                 modifier = Modifier.testTag("checkin_grant_location_button")
                             ) {
                                 Text(
-                                    text = "Allow GPS",
+                                    text = stringResource(R.string.checkin_allow_gps),
                                     color = DeepCharcoal,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -260,7 +384,7 @@ fun CheckInOverlay(
                             color = DeepCharcoal
                         )
                         Text(
-                            text = "Tap \"I'm OK\" to cancel SOS and immediately discard the temporary 15-second audio snapshot.",
+                            text = stringResource(R.string.checkin_sos_discard_notice),
                             style = MaterialTheme.typography.labelSmall,
                             color = NeutralSlate
                         )
@@ -289,39 +413,41 @@ fun CheckInOverlay(
                 )
                 Spacer(modifier = Modifier.size(10.dp))
                 Text(
-                    text = "I'm OK",
+                    text = stringResource(R.string.action_im_okay),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
             }
 
-            // Secondary Immediate Escalation CTA ("Send SOS Now")
-            Button(
-                onClick = onRequestHelpNow,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DeepCharcoal,
-                    contentColor = androidx.compose.ui.graphics.Color.White,
-                    disabledContainerColor = DeepCharcoal.copy(alpha = 0.5f),
-                    disabledContentColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)
-                ),
-                shape = CircleShape,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(CircleShape)
-                    .testTag("need_help_now_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.NotificationsActive,
-                    contentDescription = null,
-                    tint = androidx.compose.ui.graphics.Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.size(10.dp))
-                Text(
-                    text = "Send SOS Now",
-                    color = androidx.compose.ui.graphics.Color.White,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
-                )
+            // Secondary Immediate Escalation CTA ("Send SOS Now" during countdown)
+            if (!isEmergencyTriggered) {
+                Button(
+                    onClick = onRequestHelpNow,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DeepCharcoal,
+                        contentColor = androidx.compose.ui.graphics.Color.White,
+                        disabledContainerColor = DeepCharcoal.copy(alpha = 0.5f),
+                        disabledContentColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)
+                    ),
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(CircleShape)
+                        .testTag("need_help_now_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = null,
+                        tint = androidx.compose.ui.graphics.Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.size(10.dp))
+                    Text(
+                        text = stringResource(R.string.action_need_help_now),
+                        color = androidx.compose.ui.graphics.Color.White,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                    )
+                }
             }
 
             Row(

@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SoloSignal AI</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">হোম</string>
+    <string name="nav_activity">অ্যাক্টিভিটি</string>
+    <string name="nav_contacts">পরিচিতি</string>
+    <string name="nav_settings">সেটিংস</string>
+
+    <!-- Home Screen -->
+    <string name="cd_app_logo">SoloSignal AI সুরক্ষা শিল্ড লোগো</string>
+    <string name="home_subtitle_safety_companion">ব্যক্তিগত সুরক্ষা, সর্বদা আপনার সাথে</string>
+    <string name="hero_eyebrow_active">সক্রিয় গতিবিধি পর্যবেক্ষণ</string>
+    <string name="hero_eyebrow_idle">স্ট্যান্ডবাই</string>
+    <string name="hero_headline_active">আমরা আপনার গতিবিধির উপর নজর রাখছি</string>
+    <string name="hero_headline_idle">সুরক্ষা পরীক্ষার জন্য প্রস্তুত</string>
+    <string name="hero_description_sensor_ready">হঠাৎ পড়ে যাওয়া এবং স্থবিরতা শনাক্ত করে, তারপর জরুরি পরিচিতিকে সতর্ক করার আগে ১৫ সেকেন্ডের বাতিলযোগ্য সময় দেয়।</string>
+    <string name="hero_description_no_sensor">এই ডিভাইসে অ্যাক্সিলোমিটার সেন্সর নেই। পরীক্ষার জন্য নিচের সিন্থেটিক মোশন ট্রেস ব্যবহার করুন।</string>
+    <string name="action_start_monitoring">পর্যবেক্ষণ শুরু করুন</string>
+    <string name="action_stop_monitoring">পর্যবেক্ষণ বন্ধ করুন</string>
+    <string name="home_contact_card_eyebrow">বিশ্বস্ত পরিচিতি</string>
+    <string name="home_contact_not_set">কোনো বিশ্বস্ত পরিচিতি সেট করা নেই</string>
+    <string name="action_add_contact">বিশ্বস্ত পরিচিতি যোগ করুন</string>
+    <string name="action_send_test_alert">টেস্ট অ্যালার্ট পাঠান</string>
+    <string name="telemetry_card_eyebrow">লাইভ মোশন উইন্ডো (3.5S)</string>
+    <string name="metric_peak_label">পিক</string>
+    <string name="metric_min_label">ন্যূনতম</string>
+    <string name="metric_tilt_label">টিল্ট</string>
+    <string name="metric_stillness_label">স্থিরতা σ</string>
+    <string name="replay_card_eyebrow">নিরাপদ পরীক্ষা রিপ্লে</string>
+    <string name="replay_card_title">সিন্থেটিক মোশন রিপ্লে</string>
+    <string name="replay_card_subtitle">ফোন নিচে না ফেলে নিরাপদে ১৫ সেকেন্ডের কাউন্টডাউন এবং পতন সনাক্তকরণ পরীক্ষা করুন।</string>
+    <string name="safety_not_911_notice">পরীক্ষামূলক সরঞ্জাম — SoloSignal জরুরি পরিষেবা বা 911-এ সরাসরি যোগাযোগ করে না।</string>
+
+    <!-- Check-in Overlay & Notifications -->
+    <string name="notif_channel_checkin_name">জরুরি পতন চেক-ইন কাউন্টডাউন</string>
+    <string name="notif_channel_checkin_desc">পতন শনাক্ত হলে উচ্চ অগ্রাধিকারযুক্ত কাউন্টডাউন বিজ্ঞপ্তি</string>
+    <string name="notif_channel_dispatch_name">জরুরি অ্যালার্ট পাঠানোর স্থিতি</string>
+    <string name="notif_channel_dispatch_desc">অ্যালার্ট পাঠানো হলে স্থিতির আপডেট</string>
+    <string name="checkin_notif_title">পতন শনাক্ত হয়েছে — আপনি কি ঠিক আছেন? (%1$ds)</string>
+    <string name="checkin_notif_body">বাতিল করতে \'আমি ঠিক আছি\' চাপুন, অথবা অবিলম্বে অ্যালার্ট পাঠাতে \'SOS পাঠান\' চাপুন।</string>
+    <string name="action_im_okay">আমি ঠিক আছি</string>
+    <string name="action_need_help_now">এখনই SOS পাঠান</string>
+    <string name="checkin_badge_active">পতন শনাক্ত হয়েছে</string>
+    <string name="checkin_headline">আপনি কি ঠিক আছেন?</string>
+    <string name="checkin_subheadline_no_contact">বাতিল করতে \'আমি ঠিক আছি\' অথবা জরুরি অ্যালার্ট পাঠাতে \'এখনই SOS পাঠান\' নির্বাচন করুন।</string>
+    <string name="checkin_remaining_label">অটো-অ্যালার্ট পর্যন্ত বাকি</string>
+    <string name="checkin_reason_eyebrow">শনাক্তকৃত গতিবিধি ক্রম</string>
+
+    <!-- Trusted Contacts Screen -->
+    <string name="contacts_headline">বিশ্বস্ত পরিচিতি ও যাচাইকরণ</string>
+    <string name="field_your_name_label">আপনার নাম (প্রাপককে দেখানো হবে)</string>
+    <string name="field_your_name_hint">যেমন: রাহুল</string>
+    <string name="field_contact_name_label">বিশ্বস্ত পরিচিতির নাম</string>
+    <string name="field_contact_name_hint">যেমন: অনন্যা</string>
+    <string name="field_contact_email_hint">যেমন: ananya@example.com</string>
+    <string name="field_contact_phone_hint">যেমন: +91 9876543210</string>
+    <string name="field_relationship_eyebrow">সম্পর্ক</string>
+    <string name="contacts_location_toggle_title">GPS অবস্থান এবং Google Maps লিঙ্ক অন্তর্ভুক্ত করুন</string>
+    <string name="contacts_location_toggle_subtitle">অ্যালার্ট পাঠানো হলে আপনার অবস্থান এবং Google Maps লিঙ্ক পাঠায়।</string>
+    <string name="contacts_consent_text">আমি নিশ্চিত করছি যে এই ব্যক্তি অ্যালার্ট পেতে সম্মত হয়েছেন।</string>
+    <string name="error_contact_consent_required">দয়া করে নিশ্চিত করুন যে পরিচিতি সম্মতি দিয়েছেন।</string>
+    <string name="contacts_channel_section_eyebrow">অ্যালার্ট ডেলিভারি চ্যানেল</string>
+    <string name="contacts_channel_section_title">অ্যালার্ট কীভাবে পৌঁছায়</string>
+    <string name="contacts_last_payload_eyebrow">সর্বশেষ প্রেরিত ডেটা প্রিভিউ</string>
+    <string name="google_chat_backend_url_label">ক্লাউড ফাংশন ব্যাকএন্ড URL (HTTPS)</string>
+    <string name="google_chat_space_id_label">Google Chat স্পেস ID (যেমন: spaces/AAAABBBB)</string>
+    <string name="google_chat_space_label_input">স্পেস প্রদর্শনের নাম (ঐচ্ছিক)</string>
+    <string name="google_chat_save_connect_cta">Google Chat স্পেস সংরক্ষণ ও যাচাই করুন</string>
+
+    <!-- Settings & Privacy Screen -->
+    <string name="settings_eyebrow">সেটিংস, অনুমতি ও গোপনীয়তা</string>
+    <string name="settings_headline">সুরক্ষা ও গোপনীয়তা নিয়ন্ত্রণ</string>
+    <string name="settings_subtitle">কাউন্টডাউন সময়, অবস্থান, বিজ্ঞপ্তির অনুমতি পরিচালনা করুন।</string>
+    <string name="settings_checkin_section_eyebrow">চেক-ইন কাউন্টডাউন ও প্রতিক্রিয়া</string>
+    <string name="settings_countdown_label">চেক-ইন কাউন্টডাউন সময়কাল</string>
+    <string name="settings_countdown_helper">অ্যালার্ট পাঠানোর আগে \'আমি ঠিক আছি\' চাপার জন্য কতক্ষণ অপেক্ষা করবে।</string>
+    <string name="settings_vibration_title">চেক-ইন ও অ্যালার্টের সময় ভাইব্রেট করুন</string>
+    <string name="settings_vibration_subtitle">কাউন্টডাউন এবং অ্যালার্ট এলে ফোন ভাইব্রেট হবে।</string>
+    <string name="diag_accelerometer_label">অ্যাক্সিলোমিটার হার্ডওয়্যার</string>
+    <string name="diag_sensor_present">উপলব্ধ (~50 Hz)</string>
+    <string name="diag_sensor_missing">অনুপলব্ধ (সিন্থেটিক মোশন ব্যবহার করুন)</string>
+    <string name="privacy_card_eyebrow">গোপনীয়তা ও অ্যাকাউন্ট সুরক্ষা</string>
+    <string name="privacy_card_title">জিরো-ট্রাস্ট গোপনীয়তা আর্কিটেকচার</string>
+    <string name="privacy_card_bullets">• গতির নমুনাগুলি ফোনের ৩.৫ সেকেন্ডের বাফারে থাকে, কখনোই আপলোড হয় না।\n• কোনো সার্বজনীন ডিরেক্টরি নেই; পরিচিতিরা যাচাইকৃত অনুরোধের মাধ্যমে সংযুক্ত হয়।\n• FCM টোকেন সম্পূর্ণ নিরাপদ ও ব্যক্তিগত থাকে।</string>
+    <string name="delete_data_eyebrow">ডেটা নিয়ন্ত্রণ</string>
+    <string name="delete_data_title">সমস্ত ব্যক্তিগত ডেটা মুছুন এবং পরিচিতি বাতিল করুন</string>
+    <string name="delete_data_subtitle">ইতিহাস, পরিচিতি এবং অনুমতি সম্পূর্ণ পরিষ্কার করে।</string>
+    <string name="action_delete_all_data">সমস্ত ব্যক্তিগত ডেটা মুছুন</string>
+    <string name="delete_data_confirm_prompt">আপনি কি নিশ্চিতভাবে সমস্ত ইতিহাস ও পরিচিতি মুছে ফেলতে চান?</string>
+    <string name="action_confirm_delete">হ্যাঁ, সবকিছু মুছুন</string>
+    <string name="action_cancel">বাতিল</string>
+
+    <!-- Language Selection -->
+    <string name="settings_language_label">অ্যাপের ভাষা</string>
+    <string name="settings_language_subtitle">SoloSignal AI-এর প্রদর্শনের ভাষা নির্বাচন করুন</string>
+    <string name="dialog_select_language_title">ভাষা নির্বাচন করুন</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">العربية (Arabic)</string>
+    <string name="language_malayalam">മലയാളം (Malayalam)</string>
+    <string name="language_hindi">हिन्दी (Hindi)</string>
+    <string name="language_tamil">தமிழ் (Tamil)</string>
+    <string name="language_telugu">తెలుగు (Telugu)</string>
+    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+    <string name="language_bengali">বাংলা (Bengali)</string>
+    <string name="language_marathi">मराठी (Marathi)</string>
+    <string name="language_gujarati">ગુજરાતી (Gujarati)</string>
+    <string name="language_punjabi">ਪੰਜਾਬੀ (Punjabi)</string>
+    <string name="language_urdu">اردو (Urdu)</string>
+
+    <!-- Additional Emergency & Check-in strings -->
+    <string name="checkin_emergency_sos_active">জরুরি SOS সক্রিয়</string>
+    <string name="checkin_dispatched_to_contact">%1$s-এর কাছে জরুরি অ্যালার্ট পাঠানো হয়েছে। অ্যালার্ম বাজছে।</string>
+    <string name="checkin_sos_active_generic">জরুরি SOS সক্রিয়। অ্যালার্ম বাজছে।</string>
+    <string name="checkin_sending_sos_countdown">বাতিল না হলে %2$d সেকেন্ডে %1$s-এর কাছে SOS পাঠানো হচ্ছে।</string>
+    <string name="checkin_tap_ok_or_sos">বাতিল করতে \'আমি ঠিক আছি\' চাপুন, অথবা এখনই SOS পাঠান।</string>
+    <string name="checkin_gps_ready">GPS অবস্থান প্রস্তুত</string>
+    <string name="checkin_location_disabled">অবস্থান নিষ্ক্রিয়</string>
+    <string name="checkin_allow_gps">GPS অনুমতি দিন</string>
+    <string name="checkin_sos_discard_notice">SOS বাতিল করতে এবং অডিও মুছে ফেলতে \"আমি ঠিক আছি\" চাপুন।</string>
+    <string name="seconds_label">সেকেন্ড</string>
+
+    <!-- Settings & Permissions -->
+    <string name="settings_sign_out">সাইন আউট</string>
+    <string name="settings_clear">পরিষ্কার করুন</string>
+    <string name="permission_location_title">অবস্থানের অনুমতি</string>
+    <string name="permission_location_desc">অ্যালার্টে GPS অবস্থান যুক্ত করতে প্রয়োজন।</string>
+    <string name="permission_mic_title">মাইক্রোফোন অনুমতি</string>
+    <string name="permission_mic_desc">ঐচ্ছিক: শুধুমাত্র SOS অডিও রেকর্ডিং চালু থাকলে ব্যবহৃত হয়।</string>
+    <string name="permission_notif_title">জরুরি বিজ্ঞপ্তি</string>
+    <string name="permission_notif_desc">জরুরি অ্যালার্ট পপ-আপের জন্য প্রয়োজনীয়।</string>
+    <string name="permission_fullscreen_title">ফুল-স্ক্রিন জরুরি অ্যালার্ট</string>
+    <string name="permission_fullscreen_desc">লক স্ক্রিনেও জরুরি স্ক্রিন প্রদর্শন করে।</string>
+    <string name="permission_grant">অনুমতি দিন</string>
+    <string name="permission_grant_mic">মাইক্রোফোনের অনুমতি দিন</string>
+    <string name="settings_delete_audio_clips">সংরক্ষিত SOS অডিও মুছুন</string>
+    <string name="settings_agree_and_enable">সম্মত হন ও চালু করুন</string>
+    <string name="action_yes_delete">হ্যাঁ, মুছুন</string>
+
+    <!-- Medical ID & Post Fall Assessment -->
+    <string name="medical_id_title">জরুরি মেডিকেল আইডি</string>
+    <string name="medical_id_close">বন্ধ করুন</string>
+    <string name="medical_id_clear">মেডিকেল ডেটা মুছুন</string>
+    <string name="post_fall_skip">এড়িয়ে যান</string>
+    <string name="post_fall_read_aloud">উচ্চস্বরে পড়ুন</string>
+    <string name="post_fall_voice_on">ভয়েস অন</string>
+    <string name="post_fall_step_progress">%1$d / %2$d</string>
+
+    <!-- Post-Fall Assessment Questions & Wizard -->
+    <string name="pfa_q1_title">কী ঘটেছিল?</string>
+    <string name="pfa_q2_title">আপনি কি ভালো বোধ করছেন?</string>
+    <string name="pfa_q3_title">আপনার কি কোনো ব্যথা আছে?</string>
+    <string name="pfa_q4_title">আপনি কি স্বাভাবিকভাবে শ্বাস নিচ্ছেন?</string>
+    <string name="pfa_q5_title">আপনার কি সাহায্যের প্রয়োজন?</string>
+
+    <!-- Q1 Options & Badges -->
+    <string name="pfa_opt_fell">আমি পড়ে গিয়েছিলাম</string>
+    <string name="pfa_opt_phone_fell">শুধু আমার ফোনটি পড়ে গিয়েছিল</string>
+    <string name="pfa_opt_sitting">আমি বসছিলাম</string>
+    <string name="pfa_opt_moving">আমি কেবল চলাফেরা করছিলাম</string>
+    <string name="pfa_opt_false_alarm">ভুল সনাক্তকরণ</string>
+    <string name="pfa_opt_unsure">নিশ্চিত নই</string>
+    <string name="pfa_badge_fall">পতন</string>
+    <string name="pfa_badge_phone_only">শুধু ফোন</string>
+    <string name="pfa_badge_sitting">বসা</string>
+    <string name="pfa_badge_normal">স্বাভাবিক</string>
+    <string name="pfa_badge_false_alarm">ভুল সতর্কতা</string>
+    <string name="pfa_badge_unsure">অনিশ্চিত</string>
+
+    <!-- Q2 Options & Badges -->
+    <string name="pfa_feeling_yes">হ্যাঁ, আমি ঠিক আছি</string>
+    <string name="pfa_feeling_uncomfortable">কিছুটা অস্বস্তি হচ্ছে</string>
+    <string name="pfa_feeling_no">না, ভালো লাগছে না</string>
+    <string name="pfa_badge_good">ভালো</string>
+    <string name="pfa_badge_caution">সতর্কতা</string>
+    <string name="pfa_badge_unwell">অসুস্থ</string>
+
+    <!-- Q3 Pain Options & Badges -->
+    <string name="pfa_pain_none">কোনো ব্যথা নেই</string>
+    <string name="pfa_pain_mild">সামান্য ব্যথা</string>
+    <string name="pfa_pain_moderate">মাঝারি ব্যথা</string>
+    <string name="pfa_pain_severe">তীব্র ব্যথা</string>
+    <string name="pfa_badge_none">নেই</string>
+    <string name="pfa_badge_mild">মৃদু</string>
+    <string name="pfa_badge_moderate">মাঝারি</string>
+    <string name="pfa_badge_urgent">জরুরি</string>
+
+    <!-- Q4 & Q5 Choices -->
+    <string name="pfa_ans_yes">হ্যাঁ</string>
+    <string name="pfa_ans_no">না</string>
+    <string name="pfa_ans_not_sure">নিশ্চিত নই</string>
+    <string name="pfa_badge_im_okay">আমি ঠিক আছি</string>
+    <string name="pfa_badge_get_help">সাহায্য নিন</string>
+
+    <!-- Post-Fall Navigation & Buttons -->
+    <string name="pfa_btn_previous">পূর্ববর্তী</string>
+    <string name="pfa_btn_skip">এড়িয়ে যান</string>
+    <string name="pfa_btn_next">পরবর্তী প্রশ্ন</string>
+    <string name="pfa_btn_finish">মূল্যায়ন সম্পন্ন করুন</string>
+    <string name="pfa_false_alarm_title">ভুল অ্যালার্ম নিশ্চিতকরণ</string>
+    <string name="pfa_btn_done_safe">সম্পন্ন — আমি নিরাপদ</string>
+    <string name="pfa_btn_check_health_anyway">তবুও আমার স্বাস্থ্য পরীক্ষা করুন</string>
+    <string name="pfa_btn_change_answer">উত্তর পরিবর্তন করুন</string>
+
+    <!-- Post-Fall Health Triage Result -->
+    <string name="pfa_result_title">স্বাস্থ্য পরীক্ষার ফলাফল</string>
+    <string name="pfa_tier_urgent">জরুরি — এখনই সাহায্য নিন</string>
+    <string name="pfa_tier_caution">দয়া করে বিশ্রাম নিন এবং পর্যবেক্ষণ করুন</string>
+    <string name="pfa_tier_low_risk">ধীরে চলুন এবং শারীরিক অবস্থা লক্ষ্য করুন</string>
+    <string name="pfa_btn_call_emergency">জরুরি সেবায় কল করুন (%1$s)</string>
+    <string name="pfa_btn_alert_contact">বিশ্বস্ত পরিচিতিকে সতর্ক করুন</string>
+    <string name="pfa_btn_done">আমার শেষ হয়েছে</string>
+    <string name="pfa_evaluating">মেডিকেল আইডির সাথে আপনার প্রতিক্রিয়া পর্যালোচনা করা হচ্ছে…</string>
+
+    <!-- Medical ID Sheet -->
+    <string name="med_id_full_name">পুরো নাম (ঐচ্ছিক)</string>
+    <string name="med_id_dob">জন্ম তারিখ (যেমন: 1952-04-15)</string>
+    <string name="med_id_age">বয়স (যেমন: 72)</string>
+    <string name="med_id_blood_type">রক্তের গ্রুপ</string>
+    <string name="med_id_known_conditions">পূর্বের অসুস্থতা বা অবস্থা</string>
+    <string name="med_id_add_condition">অন্য শর্ত বা অবস্থা যোগ করুন</string>
+    <string name="med_id_medications">বর্তমান ওষুধসমূহ</string>
+    <string name="med_id_add_medication">আরেকটি ওষুধ যোগ করুন</string>
+    <string name="med_id_allergies">অ্যালার্জি</string>
+    <string name="med_id_add_allergy">কাস্টম অ্যালার্জি যোগ করুন</string>
+    <string name="med_id_mobility_history">চলাচলের সহায়তা বা পূর্বের পতনের ইতিহাস (যেমন: লাঠি ব্যবহার করেন, এই বছর ১ বার পড়েছেন)</string>
+    <string name="med_id_notes">ডাক্তার / উদ্ধারকারীর নোট (ঐচ্ছিক)</string>
+    <string name="med_id_save">মেডিকেল আইডি সংরক্ষণ করুন</string>
+
+    <!-- Common Action Buttons & Tooltips -->
+    <string name="action_enable">সক্ষম করুন</string>
+    <string name="action_open">খুলুন</string>
+    <string name="action_map">মানচিত্র</string>
+    <string name="action_check_on_them">আমি তাদের খোঁজ নিচ্ছি</string>
+    <string name="action_accept">গ্রহণ করুন</string>
+    <string name="action_invite">আমন্ত্রণ জানান</string>
+    <string name="action_refresh">রিফ্রেশ করুন</string>
+    <string name="action_link_account">অ্যাকাউন্ট লিঙ্ক করুন</string>
+    <string name="action_remove">মুছে ফেলুন</string>
+    <string name="tt_show_qr">আমার ব্যক্তিগত QR কোড দেখান</string>
+    <string name="tt_scan_qr">অন্য ব্যবহারকারীর QR কোড স্ক্যান করুন</string>
+</resources>

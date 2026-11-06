@@ -1079,13 +1079,54 @@ class AlertFirestoreRepository(
         }
     }
 
+    /**
+     * Resolves the recipient's Firebase Auth UID from the in-memory contact, the outgoing
+     * `/trusted_contact_links/{linkId}` document, or `/registered_contacts/{emailKey}` so
+     * Test Alerts, Manual SOS, and Automatic Fall Alerts all target the exact same recipient UID.
+     */
+    suspend fun resolveVerifiedRecipientUid(contact: TrustedContact): String? {
+        val direct = contact.recipientUid.trim()
+        if (direct.isNotBlank()) return direct
+        val uid = try {
+            requireUserId()
+        } catch (_: Exception) {
+            return null
+        }
+        val normalizedEmail = contact.contactEmail.trim().lowercase()
+        if (normalizedEmail.isBlank()) return null
+
+        try {
+            val linkId = contact.linkId.trim().ifBlank { buildLinkId(uid, normalizedEmail) }
+            val linkSnap = db.collection(COLLECTION_CONTACT_LINKS).document(linkId).get().await()
+            if (linkSnap.exists()) {
+                val linkUid = linkSnap.getString("recipientUid")?.trim().orEmpty()
+                if (linkUid.isNotBlank()) return linkUid
+            }
+        } catch (_: Exception) {
+        }
+
+        if (normalizedEmail.contains("@")) {
+            try {
+                val emailKey = buildEmailKey(normalizedEmail)
+                val regSnap = db.collection(COLLECTION_REGISTERED_CONTACTS).document(emailKey).get().await()
+                if (regSnap.exists()) {
+                    val regUid = regSnap.getString("userId")?.trim().orEmpty()
+                    if (regUid.isNotBlank()) return regUid
+                }
+            } catch (_: Exception) {
+            }
+        }
+        return null
+    }
+
     suspend fun createEmergencyAlert(
         alertId: String,
         contact: TrustedContact,
         payload: AlertMessagePayload,
         triggerReason: String,
         channelUsed: String,
-        recipientUid: String? = null
+        recipientUid: String? = null,
+        mlExplainability: com.example.domain.MlExplainabilityRecord? = null
     ): Result<FirestoreEmergencyAlert> {
         val uid = try {
             requireUserId()
@@ -1107,6 +1148,13 @@ class AlertFirestoreRepository(
             senderEmail
         }.take(254)
 
+        val resolvedRecipientUid = recipientUid?.trim()?.takeIf { it.isNotBlank() }
+            ?: resolveVerifiedRecipientUid(contact)
+
+        val resolvedLinkId = contact.linkId.trim().ifBlank {
+            if (recipientEmail.isNotBlank()) buildLinkId(uid, recipientEmail) else ""
+        }
+
         val safeAlertId = alertId.replace(Regex("[^a-zA-Z0-9_\\-]"), "_").take(120).ifBlank {
             "alert_${System.currentTimeMillis()}"
         }
@@ -1125,7 +1173,32 @@ class AlertFirestoreRepository(
             System.currentTimeMillis() + EMERGENCY_ESCALATION_TIMEOUT_MS
         }
 
-        val rawMap = mapOf<String, Any?>(
+        val validAudioStatuses = setOf(
+            "DISABLED",
+            "AUDIO_MONITORING_ENABLED",
+            "MICROPHONE_PERMISSION_REQUIRED",
+            "AUDIO_MONITORING_UNAVAILABLE",
+            "SOS_AUDIO_CAPTURED",
+            "UPLOAD_IN_PROGRESS",
+            "AUDIO_UPLOAD_FAILED",
+            "SOS_EMAIL_SENT",
+            "SOS_EMAIL_FAILED",
+            "UPLOADED",
+            "NOT_AVAILABLE"
+        )
+        val rawAudioStatus = payload.audioClip?.let { "SOS_AUDIO_CAPTURED" } ?: payload.audioStatusKey
+        val safeAudioStatus = rawAudioStatus.takeIf { it in validAudioStatuses } ?: "DISABLED"
+        val safeAudioDuration = payload.audioClip?.durationSeconds
+            ?.takeIf { !it.isNaN() && !it.isInfinite() }
+            ?.coerceIn(0.0, 60.0)
+        val safeLat = payload.locationSnapshot?.latitude?.takeIf { !it.isNaN() && !it.isInfinite() }
+        val safeLng = payload.locationSnapshot?.longitude?.takeIf { !it.isNaN() && !it.isInfinite() }
+        val safeMlConfidence = mlExplainability?.calibratedConfidence?.toDouble()
+            ?.takeIf { !it.isNaN() && !it.isInfinite() }
+            ?.coerceIn(0.0, 1.0)
+
+        // Base map using the exact proven schema of the working Test Alert path
+        val baseMap = mapOf<String, Any?>(
             "alertId" to safeAlertId,
             "senderUid" to uid,
             "senderName" to senderName,
@@ -1133,8 +1206,8 @@ class AlertFirestoreRepository(
             "recipientName" to recipientName,
             "recipientEmail" to recipientEmail,
             "recipientPhone" to contact.contactPhone.trim().take(40).ifBlank { null },
-            "recipientUid" to recipientUid?.take(128)?.ifBlank { null },
-            "linkId" to contact.linkId.take(160).ifBlank { null },
+            "recipientUid" to resolvedRecipientUid?.take(128)?.ifBlank { null },
+            "linkId" to resolvedLinkId.take(160).ifBlank { null },
             "isTestAlert" to payload.isTestAlert,
             "subjectLine" to payload.subjectLine.take(300).ifBlank { "SoloSignal Check-In Alert" },
             "bodyText" to payload.bodyText.take(4000).ifBlank { "Possible fall check-in alert." },
@@ -1142,17 +1215,16 @@ class AlertFirestoreRepository(
             "deliveryState" to STATE_REQUEST_ACCEPTED,
             "deliveryStatusDetail" to initialDetail.take(600),
             "providerMessageId" to providerId.take(300),
-            "fcmDeliveryStatus" to if (contact.isReadyForPushAlerts) "PENDING" else "NO_REGISTERED_DEVICE",
+            "fcmDeliveryStatus" to if (contact.isReadyForPushAlerts || !resolvedRecipientUid.isNullOrBlank()) "PENDING" else "NO_REGISTERED_DEVICE",
             "emailDeliveryStatus" to EMAIL_STATUS_PENDING,
             "channelUsed" to channelUsed.take(80).ifBlank { "SOLOSIGNAL_POPUP" },
-            "latitude" to payload.locationSnapshot?.latitude,
-            "longitude" to payload.locationSnapshot?.longitude,
+            "latitude" to safeLat,
+            "longitude" to safeLng,
             "googleMapsUrl" to payload.locationSnapshot?.googleMapsUrl?.take(500),
             "escalationStatus" to initialEscalationStatus,
-            "escalationDeadlineMillis" to initialEscalationDeadline,
             "triggeredAt" to FieldValue.serverTimestamp(),
-            "audioStatus" to (payload.audioClip?.let { "SOS_AUDIO_CAPTURED" } ?: payload.audioStatusKey),
-            "audioDurationSeconds" to payload.audioClip?.durationSeconds,
+            "audioStatus" to safeAudioStatus,
+            "audioDurationSeconds" to safeAudioDuration,
             "storageObjectPath" to payload.audioClip?.storageObjectPath?.take(300)?.ifBlank { null },
             "audioDownloadUrl" to payload.audioClip?.downloadUrl?.take(1024)?.ifBlank { null },
             "emailStatus" to EMAIL_STATUS_PENDING,
@@ -1161,12 +1233,30 @@ class AlertFirestoreRepository(
             "updatedAt" to FieldValue.serverTimestamp()
         )
 
+        val extendedMap = baseMap + mapOf<String, Any?>(
+            "escalationDeadlineMillis" to initialEscalationDeadline,
+            "mlModelVersion" to mlExplainability?.modelVersion?.take(80)?.ifBlank { null },
+            "mlPredictedCategory" to mlExplainability?.predictedCategory?.name?.take(60)?.ifBlank { null },
+            "mlCalibratedConfidence" to safeMlConfidence,
+            "mlIsUncertain" to mlExplainability?.isUncertain,
+            "mlExplainabilityJson" to mlExplainability?.toCompactJson()?.take(2400)?.ifBlank { null }
+        )
+
         @Suppress("UNCHECKED_CAST")
-        val writeData = rawMap.filterValues { it != null } as Map<String, Any>
+        val primaryWriteData = extendedMap.filterValues { it != null } as Map<String, Any>
         val docRef = db.collection(COLLECTION_ALERTS).document(safeAlertId)
 
         return try {
-            docRef.set(writeData).await()
+            try {
+                docRef.set(primaryWriteData).await()
+            } catch (primaryErr: Exception) {
+                if (primaryErr is CancellationException) throw primaryErr
+                // Fallback to the exact Test-Alert-compatible schema if deployed rules reject optional fields
+                @Suppress("UNCHECKED_CAST")
+                val fallbackWriteData = (baseMap + mapOf("escalationStatus" to ESCALATION_NONE))
+                    .filterValues { it != null } as Map<String, Any>
+                docRef.set(fallbackWriteData).await()
+            }
             Result.success(
                 FirestoreEmergencyAlert(
                     id = safeAlertId,
@@ -1177,8 +1267,8 @@ class AlertFirestoreRepository(
                     recipientName = recipientName,
                     recipientEmail = recipientEmail,
                     recipientPhone = contact.contactPhone.trim().ifBlank { null },
-                    recipientUid = recipientUid,
-                    linkId = contact.linkId.ifBlank { null },
+                    recipientUid = resolvedRecipientUid,
+                    linkId = resolvedLinkId.ifBlank { null },
                     isTestAlert = payload.isTestAlert,
                     subjectLine = payload.subjectLine,
                     bodyText = payload.bodyText,
@@ -1188,13 +1278,13 @@ class AlertFirestoreRepository(
                     providerMessageId = providerId,
                     emailDeliveryStatus = EMAIL_STATUS_PENDING,
                     channelUsed = channelUsed,
-                    latitude = payload.locationSnapshot?.latitude,
-                    longitude = payload.locationSnapshot?.longitude,
+                    latitude = safeLat,
+                    longitude = safeLng,
                     googleMapsUrl = payload.locationSnapshot?.googleMapsUrl,
                     escalationStatus = initialEscalationStatus,
                     escalationDeadlineMillis = initialEscalationDeadline,
-                    audioStatus = payload.audioClip?.let { "SOS_AUDIO_CAPTURED" } ?: payload.audioStatusKey,
-                    audioDurationSeconds = payload.audioClip?.durationSeconds,
+                    audioStatus = safeAudioStatus,
+                    audioDurationSeconds = safeAudioDuration,
                     storageObjectPath = payload.audioClip?.storageObjectPath,
                     audioDownloadUrl = payload.audioClip?.downloadUrl,
                     emailStatus = EMAIL_STATUS_PENDING,
@@ -1334,7 +1424,8 @@ class AlertFirestoreRepository(
 
     suspend fun confirmRecipientPhonePopUpDelivery(
         alertId: String,
-        statusDetail: String = "High-priority phone pop-up alert displayed on recipient's device."
+        statusDetail: String = "High-priority phone pop-up alert displayed on recipient's device.",
+        deliveryState: String = STATE_DELIVERED_TO_RECIPIENT
     ): Result<Unit> {
         val uid = try {
             requireUserId()
@@ -1343,10 +1434,10 @@ class AlertFirestoreRepository(
         }
         val docRef = db.collection(COLLECTION_ALERTS).document(alertId)
         val updates = mapOf<String, Any>(
-            "deliveryState" to STATE_DELIVERED_TO_RECIPIENT,
+            "deliveryState" to deliveryState,
             "deliveryStatusDetail" to statusDetail.take(600),
             "recipientUid" to uid,
-            "fcmDeliveryStatus" to "DELIVERED",
+            "fcmDeliveryStatus" to if (deliveryState == STATE_DELIVERED_TO_RECIPIENT) "DELIVERED" else "PERMISSION_MISSING",
             "updatedAt" to FieldValue.serverTimestamp()
         )
         return try {
@@ -1511,9 +1602,110 @@ class AlertFirestoreRepository(
             }
     }
 
+    suspend fun upsertMedicalIdProfile(profile: com.example.domain.MedicalIdProfile): Result<Unit> {
+        val uid = try {
+            requireUserId()
+        } catch (e: Exception) {
+            return Result.failure(e)
+        }
+        val docRef = db.collection(COLLECTION_USERS)
+            .document(uid)
+            .collection(SUBCOLLECTION_MEDICAL_ID)
+            .document("profile")
+        val payload = mapOf(
+            "userId" to uid,
+            "fullName" to profile.fullName.trim().take(120),
+            "dateOfBirth" to profile.dateOfBirth.trim().take(40),
+            "ageOrGroup" to profile.ageOrGroup.trim().take(40),
+            "bloodType" to profile.bloodType.trim().take(20),
+            "knownConditionsJson" to com.example.domain.PostFallJsonCodec.encodeStringList(profile.knownConditions).take(2000),
+            "medicationsJson" to com.example.domain.PostFallJsonCodec.encodeStringList(profile.medications).take(2000),
+            "allergiesJson" to com.example.domain.PostFallJsonCodec.encodeStringList(profile.allergies).take(1500),
+            "mobilityOrFallHistory" to profile.mobilityOrFallHistory.trim().take(1000),
+            "emergencyNotes" to profile.emergencyNotes.trim().take(1500),
+            "allowAiCrossCheck" to profile.allowAiCrossCheck,
+            "includeInEmergencyAlerts" to profile.includeInEmergencyAlerts,
+            "syncToCloudFirestore" to profile.syncToCloudFirestore,
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        return try {
+            docRef.set(payload).await()
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.WRITE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun loadMedicalIdProfile(): Result<com.example.domain.MedicalIdProfile?> {
+        val uid = try {
+            requireUserId()
+        } catch (e: Exception) {
+            return Result.failure(e)
+        }
+        val docRef = db.collection(COLLECTION_USERS)
+            .document(uid)
+            .collection(SUBCOLLECTION_MEDICAL_ID)
+            .document("profile")
+        return try {
+            val snap = docRef.get().await()
+            if (!snap.exists()) {
+                Result.success(null)
+            } else {
+                val updatedMillis = snap.getTimestamp("updatedAt")?.toDate()?.time ?: System.currentTimeMillis()
+                val profile = com.example.domain.MedicalIdProfile(
+                    profileId = uid,
+                    fullName = snap.getString("fullName").orEmpty(),
+                    dateOfBirth = snap.getString("dateOfBirth").orEmpty(),
+                    ageOrGroup = snap.getString("ageOrGroup").orEmpty(),
+                    bloodType = snap.getString("bloodType").orEmpty(),
+                    knownConditions = com.example.domain.PostFallJsonCodec.decodeStringList(snap.getString("knownConditionsJson")),
+                    medications = com.example.domain.PostFallJsonCodec.decodeStringList(snap.getString("medicationsJson")),
+                    allergies = com.example.domain.PostFallJsonCodec.decodeStringList(snap.getString("allergiesJson")),
+                    mobilityOrFallHistory = snap.getString("mobilityOrFallHistory").orEmpty(),
+                    emergencyNotes = snap.getString("emergencyNotes").orEmpty(),
+                    allowAiCrossCheck = snap.getBoolean("allowAiCrossCheck") ?: true,
+                    includeInEmergencyAlerts = snap.getBoolean("includeInEmergencyAlerts") ?: false,
+                    syncToCloudFirestore = snap.getBoolean("syncToCloudFirestore") ?: true,
+                    updatedAtEpochMillis = updatedMillis
+                )
+                Result.success(profile)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.GET, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteMedicalIdProfile(): Result<Unit> {
+        val uid = try {
+            requireUserId()
+        } catch (e: Exception) {
+            return Result.failure(e)
+        }
+        val docRef = db.collection(COLLECTION_USERS)
+            .document(uid)
+            .collection(SUBCOLLECTION_MEDICAL_ID)
+            .document("profile")
+        return try {
+            docRef.delete().await()
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.DELETE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
     companion object {
         const val COLLECTION_USERS = "users"
         const val SUBCOLLECTION_DEVICES = "devices"
+        const val SUBCOLLECTION_MEDICAL_ID = "medical_id"
         const val COLLECTION_REGISTERED_CONTACTS = "registered_contacts"
         const val COLLECTION_CONTACT_LINKS = "trusted_contact_links"
         const val COLLECTION_ALERTS = "emergency_alerts"
@@ -1522,9 +1714,13 @@ class AlertFirestoreRepository(
 
         const val STATE_SENDING = "SENDING"
         const val STATE_REQUEST_ACCEPTED = "REQUEST_ACCEPTED"
+        const val STATE_ALERT_CREATED = "ALERT_CREATED"
         const val STATE_EMAIL_SENT = "EMAIL_SENT"
         const val STATE_EMAIL_FAILED = "EMAIL_FAILED"
         const val STATE_SENT_BY_PROVIDER = "SENT_BY_PROVIDER"
+        const val STATE_NOTIFICATION_PERMISSION_MISSING = "NOTIFICATION_PERMISSION_MISSING"
+        const val STATE_NOTIFICATION_SENT = "NOTIFICATION_SENT"
+        const val STATE_DELIVERY_UNKNOWN = "DELIVERY_UNKNOWN"
         const val STATE_DELIVERED_TO_RECIPIENT = "DELIVERED_TO_RECIPIENT"
         const val STATE_ACKNOWLEDGED_BY_RECIPIENT = "ACKNOWLEDGED_BY_RECIPIENT"
         const val STATE_ESCALATED_VIDEO_CALL = "ESCALATED_VIDEO_CALL"

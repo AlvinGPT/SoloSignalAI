@@ -202,8 +202,14 @@ service cloud.firestore {
              (!('storageObjectPath' in data) || data.storageObjectPath == null || (data.storageObjectPath is string && data.storageObjectPath.size() <= 300)) &&
              (!('audioDownloadUrl' in data) || data.audioDownloadUrl == null || (data.audioDownloadUrl is string && data.audioDownloadUrl.size() <= 1024)) &&
              (!('emailStatus' in data) || data.emailStatus == null || (data.emailStatus is string && isValidEmailDeliveryStatus(data.emailStatus))) &&
+             (!('emailStatusDetail' in data) || data.emailStatusDetail == null || (data.emailStatusDetail is string && data.emailStatusDetail.size() <= 600)) &&
              (!('emailSentAt' in data) || data.emailSentAt == null || (data.emailSentAt is timestamp && data.emailSentAt <= request.time)) &&
              (!('failureReason' in data) || data.failureReason == null || (data.failureReason is string && data.failureReason.size() <= 600)) &&
+             (!('mlModelVersion' in data) || data.mlModelVersion == null || (data.mlModelVersion is string && data.mlModelVersion.size() <= 80)) &&
+             (!('mlPredictedCategory' in data) || data.mlPredictedCategory == null || (data.mlPredictedCategory is string && data.mlPredictedCategory.size() <= 60)) &&
+             (!('mlCalibratedConfidence' in data) || data.mlCalibratedConfidence == null || ((data.mlCalibratedConfidence is int || data.mlCalibratedConfidence is float) && data.mlCalibratedConfidence >= 0 && data.mlCalibratedConfidence <= 1)) &&
+             (!('mlIsUncertain' in data) || data.mlIsUncertain == null || data.mlIsUncertain is bool) &&
+             (!('mlExplainabilityJson' in data) || data.mlExplainabilityJson == null || (data.mlExplainabilityJson is string && data.mlExplainabilityJson.size() <= 2500)) &&
              data.locationSummary is string && data.locationSummary.size() >= 1 && data.locationSummary.size() <= 500 &&
              data.createdAt is timestamp && data.createdAt <= request.time &&
              data.updatedAt is timestamp && data.updatedAt <= request.time;
@@ -384,6 +390,64 @@ service cloud.firestore {
 
         allow delete: if isSignedIn() && isValidId(userId) && isValidId(deviceId) && request.auth.uid == userId;
       }
+
+      // 1c. Voluntary Private Medical ID Profile (Strictly private to owner when cloud sync is consented)
+      match /medical_id/{docId} {
+        allow get, list: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+        allow create, update: if isSignedIn() &&
+                                 isValidId(userId) &&
+                                 isValidId(docId) &&
+                                 request.auth.uid == userId &&
+                                 incoming().userId == userId &&
+                                 incoming().keys().hasAll([
+                                   'userId',
+                                   'fullName',
+                                   'dateOfBirth',
+                                   'ageOrGroup',
+                                   'bloodType',
+                                   'knownConditionsJson',
+                                   'medicationsJson',
+                                   'allergiesJson',
+                                   'mobilityOrFallHistory',
+                                   'emergencyNotes',
+                                   'allowAiCrossCheck',
+                                   'includeInEmergencyAlerts',
+                                   'syncToCloudFirestore',
+                                   'updatedAt'
+                                 ]) &&
+                                 incoming().keys().hasOnly([
+                                   'userId',
+                                   'fullName',
+                                   'dateOfBirth',
+                                   'ageOrGroup',
+                                   'bloodType',
+                                   'knownConditionsJson',
+                                   'medicationsJson',
+                                   'allergiesJson',
+                                   'mobilityOrFallHistory',
+                                   'emergencyNotes',
+                                   'allowAiCrossCheck',
+                                   'includeInEmergencyAlerts',
+                                   'syncToCloudFirestore',
+                                   'updatedAt'
+                                 ]) &&
+                                 incoming().fullName is string && incoming().fullName.size() <= 120 &&
+                                 incoming().dateOfBirth is string && incoming().dateOfBirth.size() <= 40 &&
+                                 incoming().ageOrGroup is string && incoming().ageOrGroup.size() <= 40 &&
+                                 incoming().bloodType is string && incoming().bloodType.size() <= 20 &&
+                                 incoming().knownConditionsJson is string && incoming().knownConditionsJson.size() <= 2000 &&
+                                 incoming().medicationsJson is string && incoming().medicationsJson.size() <= 2000 &&
+                                 incoming().allergiesJson is string && incoming().allergiesJson.size() <= 1500 &&
+                                 incoming().mobilityOrFallHistory is string && incoming().mobilityOrFallHistory.size() <= 1000 &&
+                                 incoming().emergencyNotes is string && incoming().emergencyNotes.size() <= 1500 &&
+                                 incoming().allowAiCrossCheck is bool &&
+                                 incoming().includeInEmergencyAlerts is bool &&
+                                 incoming().syncToCloudFirestore is bool &&
+                                 incoming().updatedAt is timestamp && incoming().updatedAt <= request.time;
+
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(docId) && request.auth.uid == userId;
+      }
     }
 
     // 2. Trusted Contact Verification & Authorization Links
@@ -538,8 +602,14 @@ service cloud.firestore {
                          'storageObjectPath',
                          'audioDownloadUrl',
                          'emailStatus',
+                         'emailStatusDetail',
                          'emailSentAt',
                          'failureReason',
+                         'mlModelVersion',
+                         'mlPredictedCategory',
+                         'mlCalibratedConfidence',
+                         'mlIsUncertain',
+                         'mlExplainabilityJson',
                          'locationSummary',
                          'createdAt',
                          'updatedAt'
@@ -580,6 +650,7 @@ service cloud.firestore {
                             'storageObjectPath',
                             'audioDownloadUrl',
                             'emailStatus',
+                            'emailStatusDetail',
                             'emailSentAt',
                             'failureReason',
                             'updatedAt'

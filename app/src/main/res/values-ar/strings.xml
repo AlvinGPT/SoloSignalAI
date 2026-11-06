@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SoloSignal AI</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_activity">النشاط</string>
+    <string name="nav_contacts">جهات الاتصال</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Home Screen -->
+    <string name="cd_app_logo">شعار درع أمان SoloSignal AI</string>
+    <string name="home_subtitle_safety_companion">الأمان الشخصي، دائمًا معك</string>
+    <string name="hero_eyebrow_active">فحص الحركة النشط</string>
+    <string name="hero_eyebrow_idle">وضع الاستعداد</string>
+    <string name="hero_headline_active">نحن نراقب حركتك للحفاظ على سلامتك</string>
+    <string name="hero_headline_idle">جاهز عندما تحتاج إلى فحص أمان</string>
+    <string name="hero_description_sensor_ready">يفحص أنماط حركة الهاتف لاكتشاف السقوط المفاجئ يليه السكون، ثم يمنحك 15 ثانية قابلة للإلغاء قبل تنبيه جهة اتصالك الموثوقة.</string>
+    <string name="hero_description_no_sensor">لم يتم العثور على مستشعر تسارع في هذا الجهاز. استخدم نماذج الحركة الاصطناعية أدناه للاختبار.</string>
+    <string name="action_start_monitoring">بدء المراقبة</string>
+    <string name="action_stop_monitoring">إيقاف المراقبة</string>
+    <string name="home_contact_card_eyebrow">جهة الاتصال الموثوقة</string>
+    <string name="home_contact_not_set">لم يتم تعيين جهة اتصال موثوقة</string>
+    <string name="action_add_contact">إضافة جهة اتصال موثوقة</string>
+    <string name="action_send_test_alert">إرسال تنبيه تجريبي</string>
+    <string name="telemetry_card_eyebrow">نافذة الحركة المباشرة (3.5 ثانية)</string>
+    <string name="metric_peak_label">الذروة</string>
+    <string name="metric_min_label">الأدنى</string>
+    <string name="metric_tilt_label">الإمالة</string>
+    <string name="metric_stillness_label">السكون σ</string>
+    <string name="replay_card_eyebrow">إعادة تشغيل آمنة للتحقق</string>
+    <string name="replay_card_title">اختبارات الحركة الاصطناعية</string>
+    <string name="replay_card_subtitle">اختبر كشف السقوط والعد التنازلي لمدة 15 ثانية بأمان دون إسقاط هاتفك.</string>
+    <string name="safety_not_911_notice">أداة أمان تجريبية — لا يتصل SoloSignal برقم الطوارئ 911 أو خدمات الإسعاف مباشرة.</string>
+
+    <!-- Check-in Overlay & Notifications -->
+    <string name="notif_channel_checkin_name">العد التنازلي للتحقق من السقوط الطارئ</string>
+    <string name="notif_channel_checkin_desc">إشعار عد تنازلي عالي الأولوية عند اكتشاف سقوط محتمل</string>
+    <string name="notif_channel_dispatch_name">حالة إرسال تنبيه الطوارئ</string>
+    <string name="notif_channel_dispatch_desc">تحديثات الحالة عند إرسال تنبيه طارئ أو تجريبي</string>
+    <string name="checkin_notif_title">تم اكتشاف سقوط محتمل — هل أنت بخير؟ (%1$ds)</string>
+    <string name="checkin_notif_body">اضغط على \'أنا بخير\' للإلغاء، أو \'إرسال SOS الآن\' لتنبيه جهة الاتصال فورًا.</string>
+    <string name="action_im_okay">أنا بخير</string>
+    <string name="action_need_help_now">إرسال SOS الآن</string>
+    <string name="checkin_badge_active">تم اكتشاف سقوط محتمل</string>
+    <string name="checkin_headline">هل أنت بخير؟</string>
+    <string name="checkin_subheadline_no_contact">اختر \'أنا بخير\' للإلغاء، أو \'إرسال SOS الآن\' لإرسال تنبيه طوارئ فوري.</string>
+    <string name="checkin_remaining_label">حتى التنبيه التلقائي</string>
+    <string name="checkin_reason_eyebrow">تسلسل الحركة المكتشف</string>
+
+    <!-- Trusted Contacts Screen -->
+    <string name="contacts_headline">جهة الاتصال الموثوقة والتحقق</string>
+    <string name="field_your_name_label">اسمك (الظاهر للمستلم)</string>
+    <string name="field_your_name_hint">مثل: أحمد علي</string>
+    <string name="field_contact_name_label">اسم جهة الاتصال الموثوقة</string>
+    <string name="field_contact_name_hint">مثل: فاطمة</string>
+    <string name="field_contact_email_hint">مثل: fatima@example.com</string>
+    <string name="field_contact_phone_hint">مثل: +966 50 123 4567</string>
+    <string name="field_relationship_eyebrow">صلة القرابة</string>
+    <string name="contacts_location_toggle_title">تضمين موقع GPS ورابط خرائط Google</string>
+    <string name="contacts_location_toggle_subtitle">يرفق إحداثياتك ورابط خرائط Google عند إرسال تنبيه الطوارئ.</string>
+    <string name="contacts_consent_text">أؤكد أن هذا الشخص وافق على تلقي تنبيهات الأمان مني.</string>
+    <string name="error_contact_consent_required">يرجى تأكيد موافقة جهة اتصالك الموثوقة على تلقي التنبيهات.</string>
+    <string name="contacts_channel_section_eyebrow">قناة تسليم التنبيه</string>
+    <string name="contacts_channel_section_title">كيفية تسليم التنبيهات</string>
+    <string name="contacts_last_payload_eyebrow">معاينة آخر بيانات مرسلة</string>
+    <string name="google_chat_backend_url_label">رابط خادم Cloud Function (HTTPS)</string>
+    <string name="google_chat_space_id_label">معرف مساحة Google Chat (مثل: spaces/AAAABBBB)</string>
+    <string name="google_chat_space_label_input">اسم المساحة (اختياري)</string>
+    <string name="google_chat_save_connect_cta">حفظ مساحة Google Chat والتحقق منها</string>
+
+    <!-- Settings & Privacy Screen -->
+    <string name="settings_eyebrow">الإعدادات والأذونات والخصوصية</string>
+    <string name="settings_headline">عناصر التحكم في الأمان والخصوصية</string>
+    <string name="settings_subtitle">إدارة وقت العد التنازلي والموقع وأذونات الإشعارات وبياناتك.</string>
+    <string name="settings_checkin_section_eyebrow">العد التنازلي للتحقق والاستجابة</string>
+    <string name="settings_countdown_label">مدة العد التنازلي للتحقق</string>
+    <string name="settings_countdown_helper">كم ينتظر SoloSignal قبل إرسال تنبيه الطوارئ.</string>
+    <string name="settings_vibration_title">الاهتزاز أثناء التحقق والتنبيهات</string>
+    <string name="settings_vibration_subtitle">يهتز الهاتف أثناء العد التنازلي للتحقق وعند وصول تنبيه طوارئ.</string>
+    <string name="diag_accelerometer_label">مستشعر التسارع</string>
+    <string name="diag_sensor_present">متوفر (~50 هرتز)</string>
+    <string name="diag_sensor_missing">غير متوفر (استخدم نماذج الحركة الاصطناعية)</string>
+    <string name="privacy_card_eyebrow">الخصوصية وحماية الحساب</string>
+    <string name="privacy_card_title">بنية الخصوصية الصفرية (Zero-Trust)</string>
+    <string name="privacy_card_bullets">• تظل عينات الحركة في ذاكرة الهاتف المؤقتة لمدة 3.5 ثانية فقط ولا يتم رفعها أبدًا.\n• لا يوجد دليل عام للمستخدمين؛ يتم التحقق عبر طلبات آمنة.\n• رموز FCM الخاصة بالأجهزة مشفرة وخاصة.</string>
+    <string name="delete_data_eyebrow">التحكم في البيانات</string>
+    <string name="delete_data_title">حذف جميع البيانات الشخصية وإلغاء جهات الاتصال</string>
+    <string name="delete_data_subtitle">مسح سجل الأحداث وجهات الاتصال المحفوظة وأذونات التنبيه.</string>
+    <string name="action_delete_all_data">حذف جميع البيانات الشخصية</string>
+    <string name="delete_data_confirm_prompt">هل أنت متأكد من رغبتك في حذف السجل وجهات الاتصال والأذونات بالكامل؟</string>
+    <string name="action_confirm_delete">نعم، احذف كل شيء</string>
+    <string name="action_cancel">إلغاء</string>
+
+    <!-- Language Selection -->
+    <string name="settings_language_label">لغة التطبيق</string>
+    <string name="settings_language_subtitle">اختر لغة عرض SoloSignal AI</string>
+    <string name="dialog_select_language_title">اختر اللغة</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">العربية (Arabic)</string>
+    <string name="language_malayalam">മലയാളം (Malayalam)</string>
+    <string name="language_hindi">हिन्दी (Hindi)</string>
+    <string name="language_tamil">தமிழ் (Tamil)</string>
+    <string name="language_telugu">తెలుగు (Telugu)</string>
+    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+    <string name="language_bengali">বাংলা (Bengali)</string>
+    <string name="language_marathi">मराठी (Marathi)</string>
+    <string name="language_gujarati">ગુજરાતી (Gujarati)</string>
+    <string name="language_punjabi">ਪੰਜਾਬੀ (Punjabi)</string>
+    <string name="language_urdu">اردو (Urdu)</string>
+
+    <!-- Additional Emergency & Check-in strings -->
+    <string name="checkin_emergency_sos_active">تنبيه SOS للطوارئ نشط</string>
+    <string name="checkin_dispatched_to_contact">تم إرسال تنبيه طارئ إلى %1$s. صوت الإنذار يعمل.</string>
+    <string name="checkin_sos_active_generic">تنبيه SOS للطوارئ نشط. صوت الإنذار يعمل.</string>
+    <string name="checkin_sending_sos_countdown">سيتم إرسال SOS إلى %1$s خلال %2$d ثانية ما لم يتم الإلغاء.</string>
+    <string name="checkin_tap_ok_or_sos">اضغط على \'أنا بخير\' للإلغاء، أو إرسال SOS الآن.</string>
+    <string name="checkin_gps_ready">موقع GPS جاهز</string>
+    <string name="checkin_location_disabled">الموقع معطل</string>
+    <string name="checkin_allow_gps">السماح بالموقع</string>
+    <string name="checkin_sos_discard_notice">اضغط على \"أنا بخير\" لإلغاء SOS وحذف التسجيل الصوتي المؤقت فورًا.</string>
+    <string name="seconds_label">ثوانٍ</string>
+
+    <!-- Settings & Permissions -->
+    <string name="settings_sign_out">تسجيل الخروج</string>
+    <string name="settings_clear">مسح</string>
+    <string name="permission_location_title">إذن الموقع الجغرافي</string>
+    <string name="permission_location_desc">مطلوب لإرفاق إحداثيات GPS في التنبيهات.</string>
+    <string name="permission_mic_title">إذن الميكروفون</string>
+    <string name="permission_mic_desc">اختياري: يستخدم فقط عند تمكين تسجيل صوت SOS.</string>
+    <string name="permission_notif_title">إشعارات الطوارئ</string>
+    <string name="permission_notif_desc">مطلوبة للنوافذ المنبثقة للتنبيهات العاجلة.</string>
+    <string name="permission_fullscreen_title">تنبيهات الطوارئ بملء الشاشة</string>
+    <string name="permission_fullscreen_desc">إيقاظ الشاشة وعرض شاشة الطوارئ فوق شاشة القفل.</string>
+    <string name="permission_grant">سماح</string>
+    <string name="permission_grant_mic">منح إذن الميكروفون</string>
+    <string name="settings_delete_audio_clips">حذف تسجيلات SOS الصوتية المحفوظة</string>
+    <string name="settings_agree_and_enable">موافقة وتفعيل</string>
+    <string name="action_yes_delete">نعم، احذف</string>
+
+    <!-- Medical ID & Post Fall Assessment -->
+    <string name="medical_id_title">الهوية الطبية للطوارئ</string>
+    <string name="medical_id_close">إغلاق</string>
+    <string name="medical_id_clear">مسح بيانات الهوية الطبية</string>
+    <string name="post_fall_skip">تخطي</string>
+    <string name="post_fall_read_aloud">قراءة بصوت عالٍ</string>
+    <string name="post_fall_voice_on">الصوت مفعّل</string>
+    <string name="post_fall_step_progress">%1$d من %2$d</string>
+
+    <!-- Post-Fall Assessment Questions & Wizard -->
+    <string name="pfa_q1_title">ماذا حدث؟</string>
+    <string name="pfa_q2_title">هل تشعر أنك بخير؟</string>
+    <string name="pfa_q3_title">هل تشعر بألم؟</string>
+    <string name="pfa_q4_title">هل تتنفس بشكل طبيعي؟</string>
+    <string name="pfa_q5_title">هل تحتاج إلى مساعدة؟</string>
+
+    <!-- Q1 Options & Badges -->
+    <string name="pfa_opt_fell">سقطت</string>
+    <string name="pfa_opt_phone_fell">سقط هاتفي فقط</string>
+    <string name="pfa_opt_sitting">كنت أجلس</string>
+    <string name="pfa_opt_moving">كنت أتحرك فقط</string>
+    <string name="pfa_opt_false_alarm">كشف خاطئ</string>
+    <string name="pfa_opt_unsure">لست متأكدًا</string>
+    <string name="pfa_badge_fall">سقوط</string>
+    <string name="pfa_badge_phone_only">الهاتف فقط</string>
+    <string name="pfa_badge_sitting">جلوس</string>
+    <string name="pfa_badge_normal">حركة عادية</string>
+    <string name="pfa_badge_false_alarm">إنذار خاطئ</string>
+    <string name="pfa_badge_unsure">غير متأكد</string>
+
+    <!-- Q2 Options & Badges -->
+    <string name="pfa_feeling_yes">نعم، أشعر أنني بخير</string>
+    <string name="pfa_feeling_uncomfortable">غير مرتاح قليلًا</string>
+    <string name="pfa_feeling_no">لا، لا أشعر أنني بخير</string>
+    <string name="pfa_badge_good">جيد</string>
+    <string name="pfa_badge_caution">حذر</string>
+    <string name="pfa_badge_unwell">لست بخير</string>
+
+    <!-- Q3 Pain Options & Badges -->
+    <string name="pfa_pain_none">لا يوجد ألم</string>
+    <string name="pfa_pain_mild">ألم خفيف</string>
+    <string name="pfa_pain_moderate">ألم متوسط</string>
+    <string name="pfa_pain_severe">ألم شديد</string>
+    <string name="pfa_badge_none">بدون</string>
+    <string name="pfa_badge_mild">خفيف</string>
+    <string name="pfa_badge_moderate">متوسط</string>
+    <string name="pfa_badge_urgent">عاجل</string>
+
+    <!-- Q4 & Q5 Choices -->
+    <string name="pfa_ans_yes">نعم</string>
+    <string name="pfa_ans_no">لا</string>
+    <string name="pfa_ans_not_sure">لست متأكدًا</string>
+    <string name="pfa_badge_im_okay">أنا بخير</string>
+    <string name="pfa_badge_get_help">طلب المساعدة</string>
+
+    <!-- Post-Fall Navigation & Buttons -->
+    <string name="pfa_btn_previous">السابق</string>
+    <string name="pfa_btn_skip">تخطي</string>
+    <string name="pfa_btn_next">السؤال التالي</string>
+    <string name="pfa_btn_finish">إنهاء التقييم</string>
+    <string name="pfa_false_alarm_title">تأكيد الإنذار الخاطئ</string>
+    <string name="pfa_btn_done_safe">تم — أنا بأمان</string>
+    <string name="pfa_btn_check_health_anyway">فحص حالتي الصحية على أي حال</string>
+    <string name="pfa_btn_change_answer">تغيير الإجابة</string>
+
+    <!-- Post-Fall Health Triage Result -->
+    <string name="pfa_result_title">نتيجة الفحص الصحي</string>
+    <string name="pfa_tier_urgent">عاجل — اطلب المساعدة فورًا</string>
+    <string name="pfa_tier_caution">يرجى الراحة والاطمئنان</string>
+    <string name="pfa_tier_low_risk">تحرك ببطء وراقب كيف تشعر</string>
+    <string name="pfa_btn_call_emergency">الاتصال بخدمات الطوارئ (%1$s)</string>
+    <string name="pfa_btn_alert_contact">تنبيه جهة الاتصال الموثوقة</string>
+    <string name="pfa_btn_done">تم</string>
+    <string name="pfa_evaluating">جارٍ مراجعة إجاباتك مع الهوية الطبية…</string>
+
+    <!-- Medical ID Sheet -->
+    <string name="med_id_full_name">الاسم الكامل (اختياري)</string>
+    <string name="med_id_dob">تاريخ الميلاد (مثل: 1952-04-15)</string>
+    <string name="med_id_age">العمر (مثل: 72)</string>
+    <string name="med_id_blood_type">فصيلة الدم</string>
+    <string name="med_id_known_conditions">الحالات الصحية المعروفة</string>
+    <string name="med_id_add_condition">إضافة حالة أخرى</string>
+    <string name="med_id_medications">الأدوية الحالية</string>
+    <string name="med_id_add_medication">إضافة دواء آخر</string>
+    <string name="med_id_allergies">الحساسية</string>
+    <string name="med_id_add_allergy">إضافة حساسية مخصصة</string>
+    <string name="med_id_mobility_history">مساعدات الحركة أو تاريخ سقوط سابق (مثل: يستخدم عصا)</string>
+    <string name="med_id_notes">ملاحظات الطبيب أو المسعف (اختياري)</string>
+    <string name="med_id_save">حفظ الهوية الطبية</string>
+
+    <!-- Common Action Buttons & Tooltips -->
+    <string name="action_enable">تفعيل</string>
+    <string name="action_open">فتح</string>
+    <string name="action_map">الخريطة</string>
+    <string name="action_check_on_them">أنا أطمئن عليهم</string>
+    <string name="action_accept">قبول</string>
+    <string name="action_invite">دعوة</string>
+    <string name="action_refresh">تحديث</string>
+    <string name="action_link_account">ربط الحساب</string>
+    <string name="action_remove">إزالة</string>
+    <string name="tt_show_qr">إظهار رمز QR الشخصي</string>
+    <string name="tt_scan_qr">مسح رمز QR لمستخدم آخر</string>
+</resources>

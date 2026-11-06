@@ -68,7 +68,25 @@ data class MotionFeatures(
     val impactDurationMs: Long = 0L,
     val impactImpulseMs2Ms: Float = 0f,
     val rejectedAsTablePlacement: Boolean = false,
-    val rejectedAsRhythmicActivity: Boolean = false
+    val rejectedAsRhythmicActivity: Boolean = false,
+    val currentAx: Float = 0f,
+    val currentAy: Float = 0f,
+    val currentAz: Float = 0f,
+    val currentMagnitudeG: Float = 0f,
+    val isSyntheticSample: Boolean = false,
+    val sensorTypeLabel: String = "TYPE_ACCELEROMETER",
+    val effectiveImpactThresholdMs2: Float = 30.0f,
+    val detectorPhase: String = "SEEKING_FREE_FALL",
+    val lastDecisionReason: String = "Waiting for sensor samples",
+    val predictedCategory: MovementCategory = MovementCategory.STANDING_STILL,
+    val calibratedConfidence: Float? = null,
+    val normalizedEntropy: Float? = null,
+    val isPredictionUncertain: Boolean = false,
+    val modelVersion: String = "",
+    val modelReadiness: ModelReadinessStatus = ModelReadinessStatus.CALIBRATED_READY,
+    val empiricalSamplingRateHz: Float = 0f,
+    val hasGyroscopeHardware: Boolean = false,
+    val explainabilityRecord: MlExplainabilityRecord? = null
 )
 
 /**
@@ -140,6 +158,22 @@ enum class DeliveryConfigStatus(val label: String, val detail: String) {
     TEST_SENT(
         label = "Test sent (Local only)",
         detail = "A clearly labelled local test notification was posted on this device. No external email was sent."
+    ),
+    ALERT_CREATED(
+        label = "Alert created",
+        detail = "Emergency incident alert was created and saved to cloud records."
+    ),
+    NOTIFICATION_PERMISSION_MISSING(
+        label = "Notification permission missing",
+        detail = "Notification permission is not granted on this device. Pop-up alerts cannot be displayed."
+    ),
+    NOTIFICATION_SENT(
+        label = "Notification sent",
+        detail = "Incident notification was scheduled and posted to the system notification tray."
+    ),
+    DELIVERY_UNKNOWN(
+        label = "Delivery unknown",
+        detail = "Alert was created, but delivery confirmation to the recipient device is unknown or pending."
     ),
     ALERT_SENT(
         label = "Sent by provider",
@@ -568,8 +602,8 @@ data class IncomingRecipientAlert(
     val triggerReason: String,
     val deliveryState: String,
     val deliveryStatusDetail: String,
-    val googleMapsUrl: String?,
-    val locationSummary: String,
+    val googleMapsUrl: String? = null,
+    val locationSummary: String = "",
     val createdAtMillis: Long,
     val latitude: Double? = null,
     val longitude: Double? = null,
@@ -595,7 +629,254 @@ data class CandidateEventSummary(
     val peakDynamicAccelerationMs2: Float = 0f,
     val peakGyroDegPerSec: Float = 0f,
     val impactDurationMs: Long = 0L,
-    val detectionDelayMs: Long = 0L
+    val detectionDelayMs: Long = 0L,
+    val explainabilityRecord: MlExplainabilityRecord? = null
+)
+
+/**
+ * Six movement categories classified by the SoloSignal AI time-series motion model.
+ */
+enum class MovementCategory(
+    val index: Int,
+    val displayLabel: String,
+    val isFallRisk: Boolean
+) {
+    STANDING_STILL(0, "Standing still", false),
+    WALKING(1, "Walking", false),
+    SITTING_DOWN(2, "Sitting down", false),
+    STAIR_MOVEMENT(3, "Stair movement", false),
+    POSSIBLE_FALL(4, "Possible fall", true),
+    UNKNOWN_UNCERTAIN(5, "Unknown / uncertain movement", false);
+
+    companion object {
+        fun fromIndex(index: Int): MovementCategory {
+            return entries.firstOrNull { it.index == index } ?: UNKNOWN_UNCERTAIN
+        }
+
+        fun fromStorageName(name: String?): MovementCategory {
+            if (name.isNullOrBlank()) return UNKNOWN_UNCERTAIN
+            return entries.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
+                ?: UNKNOWN_UNCERTAIN
+        }
+    }
+}
+
+/**
+ * Runtime status of the on-device LiteRT 1D CNN model artifact and calibration parameters.
+ */
+enum class ModelReadinessStatus(val label: String, val detail: String) {
+    CALIBRATED_READY(
+        label = "LiteRT 1D-CNN Active",
+        detail = "Trained and temperature-calibrated on-device 1D CNN is active with 3-phase rule safety fallback."
+    ),
+    MODEL_UNAVAILABLE_FALLBACK_ACTIVE(
+        label = "Rule Fallback Only",
+        detail = "Trained .tflite model asset is unavailable or uncalibrated; deterministic 3-phase rule detector is protecting you."
+    )
+}
+
+/**
+ * Compact summary of the 4.0-second (200-sample @ 50 Hz) orientation-invariant sensor window
+ * that produced a model prediction or initiated a check-in.
+ */
+data class SensorWindowSnapshot(
+    val windowSampleCount: Int = 0,
+    val windowStartNanos: Long = 0L,
+    val windowEndNanos: Long = 0L,
+    val empiricalSamplingRateHz: Float = 0f,
+    val minTotalAccelG: Float = 1.0f,
+    val peakTotalAccelMs2: Float = 9.81f,
+    val peakVerticalBodyAccelG: Float = 0f,
+    val peakHorizontalBodyAccelG: Float = 0f,
+    val peakJerkGPerSec: Float = 0f,
+    val peakGyroDegPerSec: Float = 0f,
+    val postImpactStillnessStdDevMs2: Float = 0f,
+    val hasGyroscope: Boolean = false,
+    val accelerometerMaxRangeMs2: Float? = null,
+    val downsampledMagnitudeEnvelopeG: List<Float> = emptyList()
+)
+
+/**
+ * Structured explainability audit record capturing the model prediction, calibrated confidence
+ * (only when derived from the trained model), sensor window summary, uncertainty status, and
+ * human-readable reason why the system initiated or suppressed a check-in.
+ */
+data class MlExplainabilityRecord(
+    val modelVersion: String,
+    val modelReadiness: ModelReadinessStatus,
+    val predictedCategory: MovementCategory,
+    val calibratedConfidence: Float?,
+    val classProbabilities: Map<MovementCategory, Float> = emptyMap(),
+    val normalizedEntropy: Float? = null,
+    val isUncertain: Boolean = false,
+    val triggeredByRuleFallback: Boolean = false,
+    val timestampEpochMillis: Long = System.currentTimeMillis(),
+    val windowSnapshot: SensorWindowSnapshot = SensorWindowSnapshot(),
+    val whyCheckInInitiated: String = ""
+) {
+    fun formatConfidenceBadge(): String {
+        val conf = calibratedConfidence
+        return if (conf != null && modelReadiness == ModelReadinessStatus.CALIBRATED_READY && !triggeredByRuleFallback) {
+            String.format(java.util.Locale.US, "%.1f%%", conf * 100f)
+        } else {
+            "N/A (Rule Fallback)"
+        }
+    }
+
+    fun toCompactJson(): String {
+        return try {
+            val probsJson = org.json.JSONObject()
+            for ((cat, p) in classProbabilities) {
+                probsJson.put(cat.name, p.toDouble())
+            }
+            val envArray = org.json.JSONArray()
+            for (v in windowSnapshot.downsampledMagnitudeEnvelopeG.take(25)) {
+                envArray.put((v * 100f).toInt() / 100.0)
+            }
+            val snapJson = org.json.JSONObject().apply {
+                put("windowSampleCount", windowSnapshot.windowSampleCount)
+                put("windowStartNanos", windowSnapshot.windowStartNanos)
+                put("windowEndNanos", windowSnapshot.windowEndNanos)
+                put("empiricalSamplingRateHz", windowSnapshot.empiricalSamplingRateHz.toDouble())
+                put("minTotalAccelG", windowSnapshot.minTotalAccelG.toDouble())
+                put("peakTotalAccelMs2", windowSnapshot.peakTotalAccelMs2.toDouble())
+                put("peakVerticalBodyAccelG", windowSnapshot.peakVerticalBodyAccelG.toDouble())
+                put("peakHorizontalBodyAccelG", windowSnapshot.peakHorizontalBodyAccelG.toDouble())
+                put("peakJerkGPerSec", windowSnapshot.peakJerkGPerSec.toDouble())
+                put("peakGyroDegPerSec", windowSnapshot.peakGyroDegPerSec.toDouble())
+                put("postImpactStillnessStdDevMs2", windowSnapshot.postImpactStillnessStdDevMs2.toDouble())
+                put("hasGyroscope", windowSnapshot.hasGyroscope)
+                if (windowSnapshot.accelerometerMaxRangeMs2 != null) {
+                    put("accelerometerMaxRangeMs2", windowSnapshot.accelerometerMaxRangeMs2.toDouble())
+                }
+                put("downsampledMagnitudeEnvelopeG", envArray)
+            }
+            org.json.JSONObject().apply {
+                put("modelVersion", modelVersion)
+                put("modelReadiness", modelReadiness.name)
+                put("predictedCategory", predictedCategory.name)
+                if (calibratedConfidence != null) {
+                    put("calibratedConfidence", calibratedConfidence.toDouble())
+                }
+                if (normalizedEntropy != null) {
+                    put("normalizedEntropy", normalizedEntropy.toDouble())
+                }
+                put("isUncertain", isUncertain)
+                put("triggeredByRuleFallback", triggeredByRuleFallback)
+                put("timestampEpochMillis", timestampEpochMillis)
+                put("whyCheckInInitiated", whyCheckInInitiated)
+                put("classProbabilities", probsJson)
+                put("windowSnapshot", snapJson)
+            }.toString()
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
+    companion object {
+        fun fromCompactJson(raw: String?): MlExplainabilityRecord? {
+            if (raw.isNullOrBlank()) return null
+            return try {
+                val obj = org.json.JSONObject(raw)
+                val probsObj = obj.optJSONObject("classProbabilities")
+                val probsMap = LinkedHashMap<MovementCategory, Float>()
+                if (probsObj != null) {
+                    for (cat in MovementCategory.entries) {
+                        if (probsObj.has(cat.name)) {
+                            probsMap[cat] = probsObj.optDouble(cat.name, 0.0).toFloat()
+                        }
+                    }
+                }
+                val snapObj = obj.optJSONObject("windowSnapshot")
+                val envList = mutableListOf<Float>()
+                val envArr = snapObj?.optJSONArray("downsampledMagnitudeEnvelopeG")
+                if (envArr != null) {
+                    for (i in 0 until envArr.length()) {
+                        envList.add(envArr.optDouble(i, 0.0).toFloat())
+                    }
+                }
+                val snap = if (snapObj != null) {
+                    SensorWindowSnapshot(
+                        windowSampleCount = snapObj.optInt("windowSampleCount", 0),
+                        windowStartNanos = snapObj.optLong("windowStartNanos", 0L),
+                        windowEndNanos = snapObj.optLong("windowEndNanos", 0L),
+                        empiricalSamplingRateHz = snapObj.optDouble("empiricalSamplingRateHz", 0.0).toFloat(),
+                        minTotalAccelG = snapObj.optDouble("minTotalAccelG", 1.0).toFloat(),
+                        peakTotalAccelMs2 = snapObj.optDouble("peakTotalAccelMs2", 9.81).toFloat(),
+                        peakVerticalBodyAccelG = snapObj.optDouble("peakVerticalBodyAccelG", 0.0).toFloat(),
+                        peakHorizontalBodyAccelG = snapObj.optDouble("peakHorizontalBodyAccelG", 0.0).toFloat(),
+                        peakJerkGPerSec = snapObj.optDouble("peakJerkGPerSec", 0.0).toFloat(),
+                        peakGyroDegPerSec = snapObj.optDouble("peakGyroDegPerSec", 0.0).toFloat(),
+                        postImpactStillnessStdDevMs2 = snapObj.optDouble("postImpactStillnessStdDevMs2", 0.0).toFloat(),
+                        hasGyroscope = snapObj.optBoolean("hasGyroscope", false),
+                        accelerometerMaxRangeMs2 = if (snapObj.has("accelerometerMaxRangeMs2")) {
+                            snapObj.optDouble("accelerometerMaxRangeMs2", 0.0).toFloat()
+                        } else null,
+                        downsampledMagnitudeEnvelopeG = envList
+                    )
+                } else {
+                    SensorWindowSnapshot()
+                }
+                val readinessStr = obj.optString("modelReadiness", ModelReadinessStatus.CALIBRATED_READY.name)
+                val readiness = ModelReadinessStatus.entries.firstOrNull { it.name == readinessStr }
+                    ?: ModelReadinessStatus.CALIBRATED_READY
+                MlExplainabilityRecord(
+                    modelVersion = obj.optString("modelVersion", ""),
+                    modelReadiness = readiness,
+                    predictedCategory = MovementCategory.fromStorageName(obj.optString("predictedCategory")),
+                    calibratedConfidence = if (obj.has("calibratedConfidence") && !obj.isNull("calibratedConfidence")) {
+                        obj.optDouble("calibratedConfidence").toFloat()
+                    } else null,
+                    classProbabilities = probsMap,
+                    normalizedEntropy = if (obj.has("normalizedEntropy") && !obj.isNull("normalizedEntropy")) {
+                        obj.optDouble("normalizedEntropy").toFloat()
+                    } else null,
+                    isUncertain = obj.optBoolean("isUncertain", false),
+                    triggeredByRuleFallback = obj.optBoolean("triggeredByRuleFallback", false),
+                    timestampEpochMillis = obj.optLong("timestampEpochMillis", 0L),
+                    windowSnapshot = snap,
+                    whyCheckInInitiated = obj.optString("whyCheckInInitiated", "")
+                )
+            } catch (_: Throwable) {
+                null
+            }
+        }
+    }
+}
+
+/**
+ * Quantitative evaluation metrics for a single motion/fall detection model on held-out test data.
+ */
+data class ModelEvaluationMetrics(
+    val modelName: String,
+    val modelVersion: String,
+    val totalWindows: Int,
+    val truePositives: Int,
+    val falsePositives: Int,
+    val trueNegatives: Int,
+    val falseNegatives: Int,
+    val precision: Float,
+    val recallSensitivity: Float,
+    val f1Score: Float,
+    val falsePositiveRate: Float,
+    val multiClassAccuracy: Float,
+    val expectedCalibrationError: Float?,
+    val meanInferenceLatencyMs: Double,
+    val confusionMatrix6x6: List<List<Int>>,
+    val scenarioPredictions: Map<String, MovementCategory>
+)
+
+/**
+ * Side-by-side comparison report evaluating the 3-Phase Rule Detector, Random Forest Baseline,
+ * and LiteRT 1D CNN + Hybrid Safety Engine on the exact same held-out test suite.
+ */
+data class ModelComparisonReport(
+    val evaluatedAtEpochMillis: Long = System.currentTimeMillis(),
+    val heldOutWindowCount: Int,
+    val ruleBasedMetrics: ModelEvaluationMetrics,
+    val randomForestBaselineMetrics: ModelEvaluationMetrics,
+    val cnnHybridMetrics: ModelEvaluationMetrics,
+    val limitations: List<String>
 )
 
 /**
@@ -616,5 +897,13 @@ enum class SafetyEventType(val title: String) {
     TRUSTED_CONTACT_VERIFIED("Trusted contact relationship updated"),
     GOOGLE_CHAT_CONNECTED("Google Chat space connected"),
     MONITORING_STARTED("Monitoring started"),
-    MONITORING_STOPPED("Monitoring stopped")
+    MONITORING_STOPPED("Monitoring stopped"),
+    POST_FALL_FALSE_DETECTION_LOGGED("False detection recorded (not a human fall)"),
+    POST_FALL_ASSESSMENT_COMPLETED("Post-fall health assessment completed"),
+    POST_FALL_ASSESSMENT_SKIPPED("Post-fall health assessment skipped"),
+    POST_FALL_SEVERE_SYMPTOM_SOS("Urgent SOS auto-dispatched (severe post-fall symptom)"),
+    AI_HEALTH_CROSS_CHECK_GENERATED("AI Health Cross-Check safety advisory"),
+    MEDICAL_ID_UPDATED("Medical ID health profile updated"),
+    PERSONAL_LEARNING_UPDATED("Personal movement profile updated"),
+    PERSONAL_LEARNING_RESET("Personal learning data reset to general model")
 }

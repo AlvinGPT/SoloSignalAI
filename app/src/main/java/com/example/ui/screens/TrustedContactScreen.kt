@@ -72,12 +72,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.R
 import androidx.core.content.ContextCompat
 import com.example.alerts.AlertMessagePayload
 import com.example.domain.AlertChannelType
@@ -383,7 +385,7 @@ fun TrustedContactScreen(
 
                     TooltipBox(
                         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                        tooltip = { PlainTooltip { Text("Show my personal QR code") } },
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.tt_show_qr)) } },
                         state = rememberTooltipState()
                     ) {
                         Surface(
@@ -418,7 +420,7 @@ fun TrustedContactScreen(
 
                     TooltipBox(
                         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                        tooltip = { PlainTooltip { Text("Scan another user's QR code") } },
+                        tooltip = { PlainTooltip { Text(stringResource(R.string.tt_scan_qr)) } },
                         state = rememberTooltipState()
                     ) {
                         Surface(
@@ -662,7 +664,7 @@ fun TrustedContactScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Invite", color = Color.White, maxLines = 1, softWrap = false)
+                                Text(stringResource(R.string.action_invite), color = Color.White, maxLines = 1, softWrap = false)
                             }
 
                             OutlinedButton(
@@ -683,7 +685,7 @@ fun TrustedContactScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Refresh", maxLines = 1, softWrap = false)
+                                Text(stringResource(R.string.action_refresh), maxLines = 1, softWrap = false)
                             }
                         }
                     } else if (isRegisteredNeedsConnect || isRequestPending || isInvitePending || currentContact.recipientAccepted) {
@@ -708,7 +710,7 @@ fun TrustedContactScreen(
                                         .defaultMinSize(minHeight = 48.dp)
                                         .testTag("request_contact_permission_button")
                                 ) {
-                                    Text("Link account", color = Color.White, maxLines = 1, softWrap = false)
+                                    Text(stringResource(R.string.action_link_account), color = Color.White, maxLines = 1, softWrap = false)
                                 }
                             }
 
@@ -734,7 +736,7 @@ fun TrustedContactScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Refresh", maxLines = 1, softWrap = false)
+                                Text(stringResource(R.string.action_refresh), maxLines = 1, softWrap = false)
                             }
                         }
                     }
@@ -798,7 +800,7 @@ fun TrustedContactScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Remove", maxLines = 1, softWrap = false)
+                            Text(stringResource(R.string.action_remove), maxLines = 1, softWrap = false)
                         }
                     }
 
@@ -855,7 +857,7 @@ fun TrustedContactScreen(
                                     .defaultMinSize(minHeight = 48.dp)
                                     .testTag("accept_contact_request_${req.linkId}")
                             ) {
-                                Text("Accept", color = Color.White, maxLines = 1, softWrap = false)
+                                Text(stringResource(R.string.action_accept), color = Color.White, maxLines = 1, softWrap = false)
                             }
                         }
                         Spacer(modifier = Modifier.height(6.dp))

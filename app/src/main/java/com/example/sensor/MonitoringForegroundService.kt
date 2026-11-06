@@ -14,10 +14,15 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import android.util.Log
 import com.example.MainActivity
 import com.example.R
 import com.example.alerts.CheckInActionReceiver
+import com.example.data.PreferencesRepository
 import com.example.domain.MonitoringState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Foreground service that keeps SoloSignal motion-sensor monitoring active in the background
@@ -30,19 +35,45 @@ class MonitoringForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        _isServiceRunning.value = true
+        Log.i(TAG, "MonitoringForegroundService created")
+    }
+
+    override fun onDestroy() {
+        _isServiceRunning.value = false
+        Log.i(TAG, "MonitoringForegroundService destroyed")
+        super.onDestroy()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        _isServiceRunning.value = true
         if (intent?.action == ACTION_STOP_MONITORING_SERVICE) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
+            _isServiceRunning.value = false
+            return START_NOT_STICKY
+        }
+
+        val prefsRepo = PreferencesRepository(applicationContext)
+        val isMonitoringAuthorized = prefsRepo.isMonitoringEnabled()
+
+        // If system recreated service (intent == null) but user has disabled monitoring, do not restart
+        if (intent == null && !isMonitoringAuthorized) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            _isServiceRunning.value = false
             return START_NOT_STICKY
         }
 
         val controller = SafetyMonitoringController.getInstance(applicationContext)
         controller.ensureAuthenticatedSessionInitialized()
         if (intent?.action != ACTION_ENSURE_ALERT_LISTENER &&
+            (isMonitoringAuthorized || intent != null) &&
             controller.monitoringState.value == MonitoringState.STOPPED
         ) {
-            controller.startMonitoring()
+            controller.startMonitoring(fromUserExplicitAction = false)
         }
 
         val isFallMonitoringActive = controller.monitoringState.value != MonitoringState.STOPPED
@@ -164,10 +195,14 @@ class MonitoringForegroundService : Service() {
     }
 
     companion object {
+        private const val TAG = "MonitoringFGS"
         const val CHANNEL_ID = "solosignal_monitoring_service_channel"
         const val NOTIFICATION_ID = 4101
         const val ACTION_STOP_MONITORING_SERVICE = "com.example.sensor.STOP_MONITORING_SERVICE"
         const val ACTION_ENSURE_ALERT_LISTENER = "com.example.sensor.ENSURE_ALERT_LISTENER"
+
+        private val _isServiceRunning = MutableStateFlow(false)
+        val isServiceRunning: StateFlow<Boolean> = _isServiceRunning.asStateFlow()
 
         fun start(context: Context): Boolean = startServiceSafely(context)
 

@@ -1,0 +1,160 @@
+{
+  "modelVersion": "solosignal-1dcnn-litert-v1.0.0",
+  "architecture": "1D-CNN (Conv1D[12,k=5,s=4] -> ReLU -> Conv1D[16,k=5,s=3] -> ReLU -> TemporalPool[40] -> Dense[6])",
+  "tfliteAssetName": "models/solosignal_motion_cnn_v1.tflite",
+  "tfliteSha256": "9205279d411f13857b60e2c56846f5f2bab53445ea46d4e948834ef702aa2a42",
+  "windowSamples": 200,
+  "samplingRateHz": 50,
+  "numChannels": 6,
+  "channelNames": [
+    "totalAccelG",
+    "bodyAccelG",
+    "verticalBodyAccelG",
+    "horizontalBodyAccelG",
+    "jerkMagnitudeGPerSec",
+    "gyroMagnitudeRadPerSec"
+  ],
+  "classNames": [
+    "STANDING_STILL",
+    "WALKING",
+    "SITTING_DOWN",
+    "STAIR_MOVEMENT",
+    "POSSIBLE_FALL",
+    "UNKNOWN_UNCERTAIN"
+  ],
+  "channelMeans": [
+    1.107155,
+    0.287556,
+    -0.003076,
+    0.171261,
+    -0.055734,
+    0.347209
+  ],
+  "channelStds": [
+    0.431775,
+    0.508215,
+    0.453712,
+    0.325234,
+    11.331326,
+    0.721697
+  ],
+  "calibratedTemperature": 0.5,
+  "datasetSplitSummary": {
+    "splitMethod": "Subject-Disjoint (24 Subjects: S01-S16 Train, S17-S20 Validation, S21-S24 Held-Out Test)",
+    "trainWindows": 384,
+    "validationWindows": 72,
+    "heldOutTestWindows": 72,
+    "imbalanceHandling": "Class-Weighted Focal Loss (gamma=2.0) + 3D SO(3) Orientation Augmentation + 20% Gyro Dropout"
+  },
+  "heldOutEvaluation": {
+    "cnnMultiClassAccuracy": 0.9861,
+    "cnnFallPrecision": 1.0,
+    "cnnFallRecall": 0.9167,
+    "cnnFallFalsePositiveRate": 0.0,
+    "cnnExpectedCalibrationError": 0.0195,
+    "cnnConfusionMatrix": [
+      [
+        12,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        12,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        12,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        12,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        11,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        12
+      ]
+    ],
+    "rfBaselineMultiClassAccuracy": 1.0,
+    "rfBaselineFallPrecision": 1.0,
+    "rfBaselineFallRecall": 1.0,
+    "rfBaselineFallFalsePositiveRate": 0.0,
+    "rfBaselineConfusionMatrix": [
+      [
+        12,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        12,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        12,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        12,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        12,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        12
+      ]
+    ]
+  }
+}

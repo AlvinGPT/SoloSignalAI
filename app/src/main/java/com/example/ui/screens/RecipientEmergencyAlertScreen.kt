@@ -249,12 +249,33 @@ fun RecipientEmergencyAlertScreen(
                 }
             }
 
+            if (alert.isTestAlert) {
+                PastelCard(
+                    containerColor = SkyInfoSurface,
+                    borderColor = LavenderHighlight,
+                    modifier = Modifier.testTag("test_alert_notification_banner")
+                ) {
+                    Text(
+                        text = "TEST — NOT AN EMERGENCY",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = DeepCharcoal
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "This alert was received as a test incident to verify alert delivery, notification sounds, and deep linking.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DeepCharcoal
+                    )
+                }
+            }
+
             // 2. Essential Alert Details Card: Contact Name, Alert Type, Time Received, Shared Location
             PastelCard(
                 containerColor = CardSurfaceWhite,
                 borderColor = if (alert.isTestAlert) LavenderHighlight else CoralUrgentHighlight
             ) {
-                // Header: EMERGENCY ALERT & Contact Name
+                // Header: EMERGENCY ALERT / TEST INCIDENT & Contact Name
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -263,7 +284,7 @@ fun RecipientEmergencyAlertScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(CoralSoftSurface),
+                            .background(if (alert.isTestAlert) SkyInfoSurface else CoralSoftSurface),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -274,7 +295,7 @@ fun RecipientEmergencyAlertScreen(
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        SectionEyebrow(text = "EMERGENCY ALERT")
+                        SectionEyebrow(text = if (alert.isTestAlert) "TEST INCIDENT ALERT" else "EMERGENCY ALERT")
                         Text(
                             text = alert.senderName.ifBlank { "Emergency Contact" },
                             style = MaterialTheme.typography.headlineMedium,
@@ -552,7 +573,7 @@ fun RecipientEmergencyAlertScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "I'm checking on them",
+                        text = if (alert.isTestAlert) "Acknowledge Test Alert" else "I'm checking on them",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,

@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -9,8 +11,10 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,8 +30,11 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MedicalInformation
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
@@ -57,23 +64,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.graphics.Color
+import com.example.R
 import com.example.domain.DeliveryConfigStatus
 import com.example.domain.GoogleChatAlertConfig
+import com.example.domain.MedicalIdProfile
 import com.example.domain.SosAudioClipMetadata
 import com.example.domain.SosAudioStatus
 import com.example.ui.components.PastelCard
 import com.example.ui.components.SectionEyebrow
 import com.example.ui.components.StatusPillBadge
+import com.example.ui.theme.CardSurfaceWhite
 import com.example.ui.theme.CoralSoftSurface
 import com.example.ui.theme.CoralUrgentHighlight
 import com.example.ui.theme.DeepCharcoal
 import com.example.ui.theme.HairlineDivider
 import com.example.ui.theme.LavenderSoftSurface
+import com.example.ui.theme.MintConfirm
 import com.example.ui.theme.MintSoftSurface
 import com.example.ui.theme.NeutralSlate
 import com.example.ui.theme.WarmMistBackground
@@ -113,13 +125,20 @@ fun SettingsPrivacyScreen(
     lastCapturedAudioClip: SosAudioClipMetadata? = null,
     onSosAudioEnabledChange: (Boolean, Boolean) -> Unit = { _, _ -> },
     onMicrophonePermissionResult: (Boolean) -> Unit = {},
-    onDeleteStoredSosAudio: () -> Unit = {}
+    onDeleteStoredSosAudio: () -> Unit = {},
+    medicalIdProfile: MedicalIdProfile = MedicalIdProfile(),
+    onOpenMedicalId: () -> Unit = {},
+    onSaveMedicalIdProfile: (MedicalIdProfile) -> Unit = {},
+    onClearMedicalIdProfile: () -> Unit = {},
+    selectedLanguageCode: String = "en",
+    onLanguageSelected: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     var confirmDeleteAll by remember { mutableStateOf(false) }
     var isBuzzerTesting by remember { mutableStateOf(false) }
     var showSosAudioConsentDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var audioClipDeletedMessage by remember { mutableStateOf<String?>(null) }
 
     var hasLocationPerm by remember {
@@ -258,6 +277,224 @@ fun SettingsPrivacyScreen(
                         Text("Sign Out")
                     }
                 }
+
+
+            }
+
+            // 1b. Language Selection Card
+            val currentLanguage = remember(selectedLanguageCode) {
+                com.example.util.LocaleHelper.getLanguageByCode(selectedLanguageCode)
+            }
+
+            PastelCard(
+                modifier = Modifier.testTag("settings_language_card")
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = null,
+                            tint = DeepCharcoal,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        SectionEyebrow(text = stringResource(R.string.settings_language_label).uppercase())
+                    }
+                    StatusPillBadge(
+                        label = currentLanguage.nativeName,
+                        containerColor = MintSoftSurface,
+                        contentColor = DeepCharcoal,
+                        modifier = Modifier.testTag("current_language_badge")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = stringResource(R.string.settings_language_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NeutralSlate
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick = { showLanguageDialog = true },
+                    shape = RoundedCornerShape(999.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 44.dp)
+                        .testTag("settings_change_language_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = DeepCharcoal
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${currentLanguage.nativeName} (${currentLanguage.englishName})",
+                        color = DeepCharcoal,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // 1c. Voluntary Medical ID — User Health Profile Card
+            PastelCard(
+                modifier = Modifier.testTag("settings_medical_id_card")
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MedicalInformation,
+                            contentDescription = null,
+                            tint = DeepCharcoal,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        SectionEyebrow(text = "MEDICAL ID (USER HEALTH PROFILE)")
+                    }
+                    StatusPillBadge(
+                        label = if (medicalIdProfile.isConfigured) "Configured" else "Optional",
+                        containerColor = if (medicalIdProfile.isConfigured) MintSoftSurface else LavenderSoftSurface,
+                        modifier = Modifier.testTag("settings_medical_id_badge")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = if (medicalIdProfile.isConfigured) {
+                        buildString {
+                            if (medicalIdProfile.fullName.isNotBlank()) {
+                                append("${medicalIdProfile.fullName} • ")
+                            }
+                            if (medicalIdProfile.bloodType.isNotBlank()) {
+                                append("Blood: ${medicalIdProfile.bloodType} • ")
+                            }
+                            append("${medicalIdProfile.knownConditions.size} condition(s), ${medicalIdProfile.medications.size} medication(s), ${medicalIdProfile.allergies.size} allerg(ies)")
+                        }
+                    } else {
+                        "Voluntarily store conditions, blood thinners/medications, allergies, and blood type for post-fall AI Health Cross-Checks."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NeutralSlate
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Use Medical ID in AI Health Cross-Check",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepCharcoal
+                        )
+                        Text(
+                            text = "Checks post-fall symptoms against your stored conditions and medications.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NeutralSlate
+                        )
+                    }
+                    Switch(
+                        checked = medicalIdProfile.allowAiCrossCheck,
+                        onCheckedChange = { enabled ->
+                            onSaveMedicalIdProfile(medicalIdProfile.copy(allowAiCrossCheck = enabled))
+                        },
+                        modifier = Modifier.testTag("settings_medical_id_ai_switch")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Include Medical ID in SOS Alerts",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepCharcoal
+                        )
+                        Text(
+                            text = "Attaches your consented Medical ID summary to emergency SOS messages.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NeutralSlate
+                        )
+                    }
+                    Switch(
+                        checked = medicalIdProfile.includeInEmergencyAlerts,
+                        onCheckedChange = { enabled ->
+                            onSaveMedicalIdProfile(medicalIdProfile.copy(includeInEmergencyAlerts = enabled))
+                        },
+                        modifier = Modifier.testTag("settings_medical_id_sos_switch")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onOpenMedicalId,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DeepCharcoal,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(999.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 46.dp)
+                            .testTag("settings_open_medical_id_button")
+                    ) {
+                        Text(
+                            text = if (medicalIdProfile.isConfigured) "Edit Medical ID" else "Set Up Medical ID",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (medicalIdProfile.isConfigured) {
+                        OutlinedButton(
+                            onClick = onClearMedicalIdProfile,
+                            shape = RoundedCornerShape(999.dp),
+                            modifier = Modifier
+                                .defaultMinSize(minHeight = 46.dp)
+                                .testTag("settings_clear_medical_id_button")
+                        ) {
+                            Text("Clear", color = CoralUrgentHighlight)
+                        }
+                    }
+                }
+
+
             }
 
             // 2. Alert Preferences Card
@@ -741,6 +978,65 @@ fun SettingsPrivacyScreen(
                         }
                     }
                 }
+
+                // Full-Screen Emergency Alerts (Android 14+ special access check)
+                val canUseFullScreen = remember(hasNotifPerm) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                        nm?.canUseFullScreenIntent() == true
+                    } else {
+                        true
+                    }
+                }
+                HorizontalDivider(color = HairlineDivider, thickness = 1.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.NotificationsActive, contentDescription = null, tint = DeepCharcoal, modifier = Modifier.size(18.dp))
+                        Column {
+                            Text("Full-Screen Emergency Alerts", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = DeepCharcoal)
+                            Text("Wakes display & shows emergency screen over lock screen.", style = MaterialTheme.typography.bodySmall, color = NeutralSlate)
+                        }
+                    }
+                    if (canUseFullScreen) {
+                        StatusPillBadge(label = "Granted", containerColor = MintSoftSurface, modifier = Modifier.testTag("settings_fullscreen_intent_permission_badge"))
+                    } else {
+                        Button(
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                                    try {
+                                        val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                                            data = Uri.parse("package:${context.packageName}")
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {
+                                        openAndroidAppSettings()
+                                    }
+                                } else {
+                                    openAndroidAppSettings()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = DeepCharcoal,
+                                contentColor = Color.White,
+                                disabledContainerColor = DeepCharcoal.copy(alpha = 0.5f),
+                                disabledContentColor = Color.White.copy(alpha = 0.9f)
+                            ),
+                            shape = RoundedCornerShape(999.dp),
+                            modifier = Modifier.testTag("settings_open_fullscreen_settings_button")
+                        ) {
+                            Text("Allow", color = Color.White, maxLines = 1, softWrap = false)
+                        }
+                    }
+                }
             }
 
             // 4. Data & Privacy
@@ -812,6 +1108,8 @@ fun SettingsPrivacyScreen(
                         }
                     }
                 }
+
+
             }
         }
     }
@@ -869,6 +1167,84 @@ fun SettingsPrivacyScreen(
                 }
             },
             modifier = Modifier.testTag("sos_audio_consent_dialog")
+        )
+    }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.dialog_select_language_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DeepCharcoal
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    com.example.util.LocaleHelper.SUPPORTED_LANGUAGES.forEach { lang ->
+                        val isSelected = lang.code.equals(selectedLanguageCode, ignoreCase = true)
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) MintSoftSurface else Color.Transparent,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onLanguageSelected(lang.code)
+                                    showLanguageDialog = false
+                                }
+                                .padding(horizontal = 8.dp, vertical = 10.dp)
+                                .testTag("language_option_${lang.code}")
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = lang.nativeName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = DeepCharcoal
+                                    )
+                                    Text(
+                                        text = lang.englishName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = NeutralSlate
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MintConfirm,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = { showLanguageDialog = false },
+                    modifier = Modifier.testTag("dismiss_language_dialog_button")
+                ) {
+                    Text(stringResource(R.string.action_cancel), color = DeepCharcoal)
+                }
+            },
+            containerColor = CardSurfaceWhite,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.testTag("language_selection_dialog")
         )
     }
 }

@@ -424,6 +424,26 @@
           "type": "string",
           "description": "Formatted location coordinates or reason location was unavailable."
         },
+        "mlModelVersion": {
+          "type": "string",
+          "description": "Optional version identifier of the on-device ML motion model."
+        },
+        "mlPredictedCategory": {
+          "type": "string",
+          "description": "Optional movement category predicted by the on-device ML model."
+        },
+        "mlCalibratedConfidence": {
+          "type": "number",
+          "description": "Optional temperature-calibrated confidence score from the trained model."
+        },
+        "mlIsUncertain": {
+          "type": "boolean",
+          "description": "Optional flag indicating whether the ML prediction was uncertain."
+        },
+        "mlExplainabilityJson": {
+          "type": "string",
+          "description": "Optional serialized MlExplainabilityRecord snapshot for the SOS trigger window."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",

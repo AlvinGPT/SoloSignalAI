@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,12 +11,20 @@ import com.example.domain.CandidateEventSummary
 import com.example.domain.DeliveryConfigStatus
 import com.example.domain.GpsLocationSnapshot
 import com.example.domain.IncomingRecipientAlert
+import com.example.domain.ModelComparisonReport
 import com.example.domain.MonitoringState
 import com.example.domain.MotionFeatures
 import com.example.domain.RecipientDeviceInfo
 import com.example.domain.SosAudioClipMetadata
 import com.example.domain.SosAudioStatus
 import com.example.domain.SosWorkflowState
+import com.example.data.PostFallAssessmentEntity
+import com.example.domain.HealthCrossCheckResult
+import com.example.domain.IncidentVerificationType
+import com.example.domain.MedicalIdProfile
+import com.example.domain.PersonalLearningExample
+import com.example.domain.PersonalMovementProfile
+import com.example.domain.PostFallAssessmentDraft
 import com.example.domain.TrustedContact
 import com.example.domain.TrustedContactRequestItem
 import com.example.sensor.SafetyMonitoringController
@@ -24,6 +33,8 @@ import com.example.ui.auth.GoogleAuthManager
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,6 +56,7 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
     val monitoringState: StateFlow<MonitoringState> = controller.monitoringState
+    val realMonitoringStatus: StateFlow<SafetyMonitoringController.RealMonitoringServiceStatus> = controller.realMonitoringStatus
     val sosWorkflowState: StateFlow<SosWorkflowState> = controller.sosWorkflowState
     val sosAudioStatus: StateFlow<SosAudioStatus> = controller.sosAudioStatus
     val sosAudioBufferedSeconds: StateFlow<Double> = controller.sosAudioBufferedSeconds
@@ -53,6 +65,7 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
     val recentMagnitudes: StateFlow<List<Float>> = controller.recentMagnitudes
     val countdownRemaining: StateFlow<Int> = controller.countdownRemaining
     val activeCandidateSummary: StateFlow<CandidateEventSummary?> = controller.activeCandidateSummary
+    val isEmergencyScreenActive: StateFlow<Boolean> = controller.isEmergencyScreenActive
     val deliveryStatus: StateFlow<DeliveryConfigStatus> = controller.deliveryStatus
     val deliveryStatusDetail: StateFlow<String> = controller.deliveryStatusDetail
     val requiresGmailAuthorization: StateFlow<Boolean> = controller.requiresGmailAuthorization
@@ -69,8 +82,22 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
     val contactSyncError: StateFlow<String?> = controller.contactSyncError
     val requiresInitialContactSetup: StateFlow<Boolean> = controller.requiresInitialContactSetup
     val preferencesState: StateFlow<UserPreferencesState> = controller.preferencesState
+    val modelComparisonReport: StateFlow<ModelComparisonReport?> = controller.modelComparisonReport
+    val activePostFallAssessmentDraft: StateFlow<PostFallAssessmentDraft?> = controller.activePostFallAssessmentDraft
+    val latestHealthCrossCheckResult: StateFlow<HealthCrossCheckResult?> = controller.latestHealthCrossCheckResult
+    val isEvaluatingHealthCrossCheck: StateFlow<Boolean> = controller.isEvaluatingHealthCrossCheck
+    val medicalIdProfile: StateFlow<MedicalIdProfile> = controller.medicalIdProfile
+    val personalMovementProfile: StateFlow<PersonalMovementProfile> = controller.personalMovementProfile
+    val personalLearningExamples: StateFlow<List<PersonalLearningExample>> = controller.personalLearningExamples
+    val latestFeedbackLearningExample: StateFlow<PersonalLearningExample?> = controller.latestFeedbackLearningExample
 
     val eventLogs: StateFlow<List<EventLogEntity>> = controller.eventLogsFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val postFallAssessments: StateFlow<List<PostFallAssessmentEntity>> = controller.postFallAssessmentsFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -79,13 +106,18 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
     val hasAccelerometer: Boolean = controller.hasAccelerometer
 
     init {
-        try {
-            Firebase.auth.addAuthStateListener { firebaseAuth ->
-                val user = firebaseAuth.currentUser
-                _currentUser.value = user
-                controller.onAuthenticatedUserChanged(user?.uid, user?.email)
+        viewModelScope.launch(Dispatchers.IO) {
+            delay(200L)
+            try {
+                Firebase.auth.addAuthStateListener { firebaseAuth ->
+                    val user = firebaseAuth.currentUser
+                    _currentUser.value = user
+                    viewModelScope.launch(Dispatchers.IO) {
+                        controller.onAuthenticatedUserChanged(user?.uid, user?.email)
+                    }
+                }
+            } catch (_: Exception) {
             }
-        } catch (_: Exception) {
         }
     }
 
@@ -96,7 +128,9 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
             null
         }
         _currentUser.value = user
-        controller.onAuthenticatedUserChanged(user?.uid, user?.email)
+        viewModelScope.launch(Dispatchers.IO) {
+            controller.onAuthenticatedUserChanged(user?.uid, user?.email)
+        }
     }
 
     fun completeInitialContactSetup() {
@@ -128,22 +162,30 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
 
     fun toggleMonitoring() {
         if (monitoringState.value == MonitoringState.STOPPED) {
-            controller.startMonitoring()
+            controller.startMonitoring(fromUserExplicitAction = true)
         } else {
-            controller.stopMonitoring()
+            controller.stopMonitoring(fromUserExplicitAction = true)
         }
     }
 
     fun startMonitoring() {
-        controller.startMonitoring()
+        controller.startMonitoring(fromUserExplicitAction = true)
     }
 
     fun stopMonitoring() {
-        controller.stopMonitoring()
+        controller.stopMonitoring(fromUserExplicitAction = true)
+    }
+
+    fun restoreMonitoringIfEnabled(context: android.content.Context) {
+        controller.restoreMonitoringIfEnabled(context)
     }
 
     fun runTrace(traceType: SyntheticSensorTraces.TraceType) {
         controller.runSyntheticTrace(traceType)
+    }
+
+    fun runModelComparisonBenchmark() {
+        controller.runModelComparisonBenchmark()
     }
 
     fun confirmImOkay() {
@@ -160,6 +202,10 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
 
     fun sendTestAlert() {
         controller.sendTestAlert()
+    }
+
+    fun triggerLocalTestIncident() {
+        controller.triggerLocalTestIncident()
     }
 
     fun refreshCurrentGpsLocation() {
@@ -257,6 +303,13 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    fun setSelectedLanguage(context: Context, languageCode: String) {
+        viewModelScope.launch {
+            controller.preferencesRepository.setSelectedLanguageCode(languageCode)
+            com.example.util.LocaleHelper.applyLocale(context, languageCode)
+        }
+    }
+
     fun setOptionalLocationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             controller.preferencesRepository.setOptionalLocationEnabled(enabled)
@@ -282,6 +335,7 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
     fun completeOnboarding() {
         viewModelScope.launch {
             controller.preferencesRepository.setOnboardingCompleted(true)
+            controller.startMonitoring(fromUserExplicitAction = true)
         }
     }
 
@@ -295,5 +349,62 @@ class SoloSignalViewModel(application: Application) : AndroidViewModel(applicati
 
     fun deleteAllPersonalData() {
         controller.deleteAllPersonalData()
+    }
+
+    fun startManualPostFallAssessment() {
+        controller.startManualPostFallAssessment()
+    }
+
+    fun startPostFallAssessmentForSosEvent(alertId: String, linkedEventId: String = "") {
+        controller.startPostFallAssessmentForSosEvent(alertId, linkedEventId)
+    }
+
+    fun updatePostFallAssessmentDraft(updated: PostFallAssessmentDraft) {
+        controller.updatePostFallAssessmentDraft(updated)
+    }
+
+    fun recordFalseDetectionAndClose(
+        verification: IncidentVerificationType,
+        optionalNote: String = ""
+    ) {
+        controller.recordFalseDetectionAndClose(verification, optionalNote)
+    }
+
+    fun submitPostFallAssessment() {
+        controller.submitPostFallAssessment()
+    }
+
+    fun skipPostFallAssessment() {
+        controller.skipPostFallAssessment()
+    }
+
+    fun dismissHealthCrossCheckResult() {
+        controller.dismissHealthCrossCheckResult()
+    }
+
+    fun saveMedicalIdProfile(profile: MedicalIdProfile) {
+        controller.saveMedicalIdProfile(profile)
+    }
+
+    fun clearMedicalIdProfile() {
+        controller.clearMedicalIdProfile()
+    }
+
+    fun setPersonalisationEnabled(enabled: Boolean) {
+        controller.setPersonalisationEnabled(enabled)
+    }
+
+    fun resetPersonalProfileToGeneralModel() {
+        controller.resetPersonalProfileToGeneralModel()
+    }
+
+    fun deleteAllPersonalLearningData() {
+        controller.deleteAllPersonalLearningData()
+    }
+
+    fun canUseFullScreenIntent(): Boolean = controller.alertDeliveryGateway.canUseFullScreenIntent()
+
+    fun openFullScreenIntentSettings(context: Context) {
+        controller.alertDeliveryGateway.openFullScreenIntentSettings(context)
     }
 }

@@ -29,7 +29,10 @@ const val IMPACT_THRESHOLD: Float = 30.0f
 const val SENSITIVE_IMPACT_THRESHOLD: Float = 27.0f
 
 /** Post-impact physical rebound & damping window (milliseconds) allowing the device to settle before requiring stillness. */
-const val POST_IMPACT_REBOUND_WINDOW_MS: Long = 250L
+const val POST_IMPACT_REBOUND_WINDOW_MS: Long = 500L
+
+/** Maximum transient single-sample outliers allowed during the 2.5s stillness window before rejecting as active movement. */
+const val MAX_STILLNESS_TRANSIENT_OUTLIERS: Int = 3
 
 /** Post-impact observation duration during which the device must remain still (milliseconds). */
 const val STILLNESS_MS: Long = 2500L
@@ -122,9 +125,11 @@ class CandidateFallDetector(
 
     private var stillnessStartNanos: Long = 0L
     private val stillnessMagnitudes = mutableListOf<Float>()
+    private var stillnessOutlierCount: Int = 0
 
     private var lastTriggeredTimestampNanos: Long? = null
     private var effectiveImpactThreshold: Float = config.impactThreshold
+    private var lastDecisionReason: String = "Monitoring active — awaiting free-fall (< ${config.freeFallThreshold} m/s² for >= ${config.freeFallMinDurationMs}ms)"
 
     init {
         setSensorMaximumRange(sensorMaxRange)
@@ -164,9 +169,12 @@ class CandidateFallDetector(
 
     fun getEffectiveImpactThreshold(): Float = effectiveImpactThreshold
 
+    fun getPhaseState(): PhaseState = phaseState
+
     fun reset() {
         ringBuffer.clear()
         lastTriggeredTimestampNanos = null
+        lastDecisionReason = "Monitoring active — awaiting free-fall (< ${config.freeFallThreshold} m/s² for >= ${config.freeFallMinDurationMs}ms)"
         resetPhases()
     }
 
@@ -180,6 +188,7 @@ class CandidateFallDetector(
      */
     fun applyCooldown(timestampNanos: Long = System.nanoTime()) {
         lastTriggeredTimestampNanos = timestampNanos
+        lastDecisionReason = "Cooldown active (30s) — preventing duplicate candidate alerts"
         resetPhases()
     }
 
@@ -192,6 +201,7 @@ class CandidateFallDetector(
         impactTimestampNanos = 0L
         stillnessStartNanos = 0L
         stillnessMagnitudes.clear()
+        stillnessOutlierCount = 0
     }
 
     fun getBufferedSamples(): List<MotionSample> = ringBuffer.toList()
@@ -239,6 +249,7 @@ class CandidateFallDetector(
 
         if (inCooldown) {
             resetPhases()
+            lastDecisionReason = "Rejected: Cooldown active (30s) after previous candidate fall"
             return DetectionEvaluation(
                 features = buildMotionFeatures(
                     sample = sample,
@@ -247,6 +258,8 @@ class CandidateFallDetector(
                 candidateEvent = null
             )
         }
+
+        var rejectedAsTable = false
 
         // ====================================================================
         // 3-PHASE SEQUENTIAL FALL DETECTION STATE MACHINE
@@ -258,9 +271,13 @@ class CandidateFallDetector(
                     freeFallStartNanos = t
                     freeFallEndNanos = 0L
                     minFreeFallMagnitude = m
+                    lastDecisionReason = "Phase 1 started: Free-fall dip (${"%.1f".format(m)} m/s² < ${config.freeFallThreshold} m/s²)"
                     debugLog("Phase 1 (Free-Fall) started: magnitude=${"%.2f".format(m)} m/s² < threshold=${config.freeFallThreshold} m/s²")
+                } else if (m >= effectiveImpactThreshold) {
+                    // An impact alone without prior free-fall NEVER triggers an alert.
+                    rejectedAsTable = true
+                    lastDecisionReason = "Rejected: Impact peak (${"%.1f".format(m)} m/s²) had no preceding free-fall phase (< ${config.freeFallThreshold} m/s² for >= ${config.freeFallMinDurationMs}ms)"
                 }
-                // An impact alone without prior free-fall NEVER triggers an alert.
             }
 
             PhaseState.IN_FREE_FALL -> {
@@ -272,6 +289,7 @@ class CandidateFallDetector(
                     if (currentDurationMs >= config.freeFallMinDurationMs) {
                         // Satisfied minimum 40 ms free-fall requirement
                         freeFallEndNanos = t
+                        lastDecisionReason = "Phase 1 verified (${currentDurationMs}ms free-fall, min ${"%.1f".format(minFreeFallMagnitude)} m/s²) — awaiting impact >= ${"%.1f".format(effectiveImpactThreshold)} m/s²"
                     }
                 } else {
                     // Magnitude rose >= 6.0 m/s²
@@ -288,13 +306,17 @@ class CandidateFallDetector(
                             impactTimestampNanos = t
                             stillnessStartNanos = 0L
                             stillnessMagnitudes.clear()
+                            stillnessOutlierCount = 0
+                            lastDecisionReason = "Phase 2 verified: Impact peak ${"%.1f".format(m)} m/s² (>= ${"%.1f".format(effectiveImpactThreshold)} m/s²) — observing 2.5s stillness"
                             debugLog("Phase 2 (Impact) met on transition: peak=${"%.2f".format(m)} m/s² >= threshold=${effectiveImpactThreshold} m/s². Observing stillness.")
                         } else {
                             phaseState = PhaseState.WAITING_FOR_IMPACT
+                            lastDecisionReason = "Phase 1 verified (${totalDurationMs}ms free-fall) — awaiting impact >= ${"%.1f".format(effectiveImpactThreshold)} m/s² within ${config.impactWindowMs}ms"
                             debugLog("Phase 1 verified (free-fall ${totalDurationMs}ms). Awaiting impact >= ${effectiveImpactThreshold} m/s² within ${config.impactWindowMs}ms...")
                         }
                     } else {
                         // Free fall was too short (< 40 ms)
+                        lastDecisionReason = "Rejected: Free-fall dip too brief (${totalDurationMs}ms < ${config.freeFallMinDurationMs}ms required)"
                         debugLog("Phase 1 reset: free-fall duration=${totalDurationMs}ms < required=${config.freeFallMinDurationMs}ms (minMag=${"%.2f".format(minFreeFallMagnitude)} m/s²)")
                         resetPhases()
                     }
@@ -305,6 +327,7 @@ class CandidateFallDetector(
                 val elapsedSinceFreeFallMs = (t - freeFallEndNanos) / 1_000_000L
                 if (elapsedSinceFreeFallMs > config.impactWindowMs) {
                     // Expired: > 1000 ms elapsed after free-fall without >= threshold impact
+                    lastDecisionReason = "Rejected: No impact >= ${"%.1f".format(effectiveImpactThreshold)} m/s² within ${config.impactWindowMs}ms after free-fall"
                     debugLog("Phase 2 expired: ${elapsedSinceFreeFallMs}ms elapsed without impact >= ${effectiveImpactThreshold} m/s²")
                     resetPhases()
                     if (m < config.freeFallThreshold) {
@@ -320,6 +343,8 @@ class CandidateFallDetector(
                     impactTimestampNanos = t
                     stillnessStartNanos = 0L
                     stillnessMagnitudes.clear()
+                    stillnessOutlierCount = 0
+                    lastDecisionReason = "Phase 2 verified: Impact peak ${"%.1f".format(m)} m/s² (>= ${"%.1f".format(effectiveImpactThreshold)} m/s²) — observing 2.5s stillness"
                     debugLog("Phase 2 (Impact) detected: peak=${"%.2f".format(m)} m/s² >= threshold=${effectiveImpactThreshold} m/s² (after ${elapsedSinceFreeFallMs}ms). Observing stillness for ${config.stillnessMs}ms...")
                 } else if (m < config.freeFallThreshold) {
                     // New free fall dip began
@@ -340,6 +365,7 @@ class CandidateFallDetector(
                     impactTimestampNanos = t
                     stillnessStartNanos = 0L
                     stillnessMagnitudes.clear()
+                    stillnessOutlierCount = 0
                 } else {
                     val minStillBound = config.nominalGravityMs2 - config.stillnessToleranceMs2 // 7.81 m/s²
                     val maxStillBound = config.nominalGravityMs2 + config.stillnessToleranceMs2 // 11.81 m/s²
@@ -351,6 +377,7 @@ class CandidateFallDetector(
                         stillnessMagnitudes.add(m)
 
                         val stillnessDurationMs = (t - stillnessStartNanos) / 1_000_000L
+                        lastDecisionReason = "Phase 3 (Stillness): ${stillnessDurationMs}ms / ${config.stillnessMs}ms post-impact rest observed"
                         if (stillnessMagnitudes.size >= STILLNESS_MIN_SAMPLES && stillnessDurationMs >= config.stillnessMs) {
                             // Compute variation across the stillness window
                             val mean = stillnessMagnitudes.average().toFloat()
@@ -388,12 +415,14 @@ class CandidateFallDetector(
                                     detectionDelayMs = stillnessDurationMs
                                 )
 
+                                lastDecisionReason = "Accepted (${if (sample.isSynthetic) "SIMULATED" else "LIVE"}): Free-fall (${ffDurationMs}ms) → Impact (${"%.1f".format(impactPeakMagnitude)} m/s²) → Stillness (${stillnessDurationMs}ms, σ=${"%.2f".format(stdDev)} m/s²)"
                                 debugLog("Candidate fall confirmed! EventId=${candidate.eventId}, Impact=${"%.2f".format(candidate.peakMagnitude)} m/s², Stillness StdDev=${"%.2f".format(stdDev)}")
                                 resetPhases()
 
                                 val evalFeatures = buildMotionFeatures(
                                     sample = sample,
-                                    summary = "Possible fall validated: ${"%.1f".format(candidate.peakMagnitude)} m/s² impact followed by stillness"
+                                    summary = "Possible fall validated: ${"%.1f".format(candidate.peakMagnitude)} m/s² impact followed by stillness",
+                                    rejectedTable = false
                                 )
                                 return DetectionEvaluation(
                                     features = evalFeatures,
@@ -401,6 +430,7 @@ class CandidateFallDetector(
                                 )
                             } else {
                                 // High variation in the stillness window (device still moving) -> Fail
+                                lastDecisionReason = "Rejected: High post-impact variance (σ=${"%.2f".format(stdDev)} > ${config.stillnessMaxStdDevMs2} m/s²)"
                                 debugLog("Phase 3 (Stillness) failed: high variance (σ=${"%.2f".format(stdDev)} > ${config.stillnessMaxStdDevMs2} m/s²). Resetting.")
                                 resetPhases()
                             }
@@ -410,9 +440,13 @@ class CandidateFallDetector(
                         if (dtSinceImpactMs <= POST_IMPACT_REBOUND_WINDOW_MS) {
                             // Transient physical rebound or ringing immediately after impact
                         } else {
-                            // Active continuous movement after impact (walking, running, shaking) -> Stillness check fails
-                            debugLog("Phase 3 (Stillness) failed: movement outside range (${"%.2f".format(m)} m/s² outside ${"%.2f".format(minStillBound)}..${"%.2f".format(maxStillBound)} at ${dtSinceImpactMs}ms after impact). Resetting.")
-                            resetPhases()
+                            stillnessOutlierCount += 1
+                            if (stillnessOutlierCount > MAX_STILLNESS_TRANSIENT_OUTLIERS) {
+                                // Active continuous movement after impact (walking, running, shaking) -> Stillness check fails
+                                lastDecisionReason = "Rejected: Active movement after impact (${"%.1f".format(m)} m/s² outside ${"%.1f".format(minStillBound)}..${"%.1f".format(maxStillBound)} m/s²)"
+                                debugLog("Phase 3 (Stillness) failed: movement outside range (${"%.2f".format(m)} m/s² outside ${"%.2f".format(minStillBound)}..${"%.2f".format(maxStillBound)} at ${dtSinceImpactMs}ms after impact). Resetting.")
+                                resetPhases()
+                            }
                         }
                     }
                 }
@@ -426,13 +460,18 @@ class CandidateFallDetector(
             PhaseState.OBSERVING_STILLNESS -> "Phase 3: Impact ${"%.1f".format(impactPeakMagnitude)} m/s² detected; observing 2.5s stillness..."
         }
 
-        val features = buildMotionFeatures(sample = sample, summary = statusDescription)
+        val features = buildMotionFeatures(
+            sample = sample,
+            summary = statusDescription,
+            rejectedTable = rejectedAsTable
+        )
         return DetectionEvaluation(features = features, candidateEvent = null)
     }
 
     private fun buildMotionFeatures(
         sample: MotionSample,
-        summary: String
+        summary: String,
+        rejectedTable: Boolean = false
     ): MotionFeatures {
         val samples = ringBuffer.toList()
         val count = samples.size
@@ -461,8 +500,17 @@ class CandidateFallDetector(
             peakGyroDegPerSec = sample.gyroMagnitudeDegPerSec,
             impactDurationMs = 50L,
             impactImpulseMs2Ms = 0f,
-            rejectedAsTablePlacement = false,
-            rejectedAsRhythmicActivity = false
+            rejectedAsTablePlacement = rejectedTable,
+            rejectedAsRhythmicActivity = false,
+            currentAx = sample.ax,
+            currentAy = sample.ay,
+            currentAz = sample.az,
+            currentMagnitudeG = sample.magnitudeG,
+            isSyntheticSample = sample.isSynthetic,
+            sensorTypeLabel = sample.sensorType,
+            effectiveImpactThresholdMs2 = effectiveImpactThreshold,
+            detectorPhase = phaseState.name,
+            lastDecisionReason = lastDecisionReason
         )
     }
 

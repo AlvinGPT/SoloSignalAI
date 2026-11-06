@@ -90,4 +90,153 @@
     <string name="delete_data_confirm_prompt">Are you sure you want to delete all local history, saved contacts, and alert authorizations?</string>
     <string name="action_confirm_delete">Yes, Delete Everything</string>
     <string name="action_cancel">Cancel</string>
+
+    <!-- Language Selection -->
+    <string name="settings_language_label">App Language</string>
+    <string name="settings_language_subtitle">Choose the display language for SoloSignal AI</string>
+    <string name="dialog_select_language_title">Select Language</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">العربية (Arabic)</string>
+    <string name="language_malayalam">മലയാളം (Malayalam)</string>
+    <string name="language_hindi">हिन्दी (Hindi)</string>
+    <string name="language_tamil">தமிழ் (Tamil)</string>
+    <string name="language_telugu">తెలుగు (Telugu)</string>
+    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+    <string name="language_bengali">বাংলা (Bengali)</string>
+    <string name="language_marathi">मराठी (Marathi)</string>
+    <string name="language_gujarati">ગુજરાતી (Gujarati)</string>
+    <string name="language_punjabi">ਪੰਜਾਬੀ (Punjabi)</string>
+    <string name="language_urdu">اردو (Urdu)</string>
+
+    <!-- Additional Emergency & Check-in strings -->
+    <string name="checkin_emergency_sos_active">EMERGENCY SOS ACTIVE</string>
+    <string name="checkin_dispatched_to_contact">Emergency alert dispatched to %1$s. Alarm sounding.</string>
+    <string name="checkin_sos_active_generic">Emergency SOS active. Alarm sounding.</string>
+    <string name="checkin_sending_sos_countdown">Sending SOS to %1$s in %2$ds unless cancelled.</string>
+    <string name="checkin_tap_ok_or_sos">Tap I\'m OK to cancel, or Send SOS Now.</string>
+    <string name="checkin_gps_ready">GPS location ready</string>
+    <string name="checkin_location_disabled">Location disabled</string>
+    <string name="checkin_allow_gps">Allow GPS</string>
+    <string name="checkin_sos_discard_notice">Tap \"I\'m OK\" to cancel SOS and immediately discard the temporary 15-second audio snapshot.</string>
+    <string name="seconds_label">SECONDS</string>
+
+    <!-- Settings & Permissions -->
+    <string name="settings_sign_out">Sign Out</string>
+    <string name="settings_clear">Clear</string>
+    <string name="permission_location_title">Location Access</string>
+    <string name="permission_location_desc">Needed for GPS coordinates in alerts.</string>
+    <string name="permission_mic_title">Microphone Access</string>
+    <string name="permission_mic_desc">Optional: used only when SOS Audio Recording is enabled.</string>
+    <string name="permission_notif_title">Emergency Notifications</string>
+    <string name="permission_notif_desc">Needed for urgent alert pop-ups.</string>
+    <string name="permission_fullscreen_title">Full-Screen Emergency Alerts</string>
+    <string name="permission_fullscreen_desc">Wakes display &amp; shows emergency screen over lock screen.</string>
+    <string name="permission_grant">Allow</string>
+    <string name="permission_grant_mic">Grant Microphone Permission</string>
+    <string name="settings_delete_audio_clips">Delete Stored SOS Audio Clips</string>
+    <string name="settings_agree_and_enable">Agree &amp; Enable</string>
+    <string name="action_yes_delete">Yes, Delete</string>
+
+    <!-- Medical ID & Post Fall Assessment -->
+    <string name="medical_id_title">Emergency Medical ID</string>
+    <string name="medical_id_close">Close</string>
+    <string name="medical_id_clear">Clear Medical ID Data</string>
+    <string name="post_fall_skip">Skip</string>
+    <string name="post_fall_read_aloud">Read Aloud</string>
+    <string name="post_fall_voice_on">Voice On</string>
+    <string name="post_fall_step_progress">%1$d of %2$d</string>
+
+    <!-- Post-Fall Assessment Questions & Wizard -->
+    <string name="pfa_q1_title">What happened?</string>
+    <string name="pfa_q2_title">Are you feeling okay?</string>
+    <string name="pfa_q3_title">Are you in pain?</string>
+    <string name="pfa_q4_title">Are you breathing normally?</string>
+    <string name="pfa_q5_title">Do you need help?</string>
+
+    <!-- Q1 Options & Badges -->
+    <string name="pfa_opt_fell">I fell</string>
+    <string name="pfa_opt_phone_fell">Only my phone fell</string>
+    <string name="pfa_opt_sitting">I was sitting down</string>
+    <string name="pfa_opt_moving">I was just moving</string>
+    <string name="pfa_opt_false_alarm">Wrong detection</string>
+    <string name="pfa_opt_unsure">Not sure</string>
+    <string name="pfa_badge_fall">Fall</string>
+    <string name="pfa_badge_phone_only">Phone only</string>
+    <string name="pfa_badge_sitting">Sitting</string>
+    <string name="pfa_badge_normal">Normal</string>
+    <string name="pfa_badge_false_alarm">False alarm</string>
+    <string name="pfa_badge_unsure">Unsure</string>
+
+    <!-- Q2 Options & Badges -->
+    <string name="pfa_feeling_yes">Yes, I feel okay</string>
+    <string name="pfa_feeling_uncomfortable">A little uncomfortable</string>
+    <string name="pfa_feeling_no">No, I don\'t feel right</string>
+    <string name="pfa_badge_good">Good</string>
+    <string name="pfa_badge_caution">Caution</string>
+    <string name="pfa_badge_unwell">Unwell</string>
+
+    <!-- Q3 Pain Options & Badges -->
+    <string name="pfa_pain_none">No pain</string>
+    <string name="pfa_pain_mild">A little pain</string>
+    <string name="pfa_pain_moderate">Moderate pain</string>
+    <string name="pfa_pain_severe">Severe pain</string>
+    <string name="pfa_badge_none">None</string>
+    <string name="pfa_badge_mild">Mild</string>
+    <string name="pfa_badge_moderate">Moderate</string>
+    <string name="pfa_badge_urgent">Urgent</string>
+
+    <!-- Q4 & Q5 Choices -->
+    <string name="pfa_ans_yes">Yes</string>
+    <string name="pfa_ans_no">No</string>
+    <string name="pfa_ans_not_sure">Not sure</string>
+    <string name="pfa_badge_im_okay">I\'m okay</string>
+    <string name="pfa_badge_get_help">Get help</string>
+
+    <!-- Post-Fall Navigation & Buttons -->
+    <string name="pfa_btn_previous">Previous</string>
+    <string name="pfa_btn_skip">Skip</string>
+    <string name="pfa_btn_next">Next Question</string>
+    <string name="pfa_btn_finish">Finish Assessment</string>
+    <string name="pfa_false_alarm_title">False Alarm Confirmation</string>
+    <string name="pfa_btn_done_safe">Done — I\'m Safe</string>
+    <string name="pfa_btn_check_health_anyway">Check My Health Anyway</string>
+    <string name="pfa_btn_change_answer">Change Answer</string>
+
+    <!-- Post-Fall Health Triage Result -->
+    <string name="pfa_result_title">Health Check Result</string>
+    <string name="pfa_tier_urgent">URGENT — GET HELP NOW</string>
+    <string name="pfa_tier_caution">PLEASE REST &amp; CHECK IN</string>
+    <string name="pfa_tier_low_risk">TAKE IT SLOW &amp; WATCH HOW YOU FEEL</string>
+    <string name="pfa_btn_call_emergency">Call Emergency Services (%1$s)</string>
+    <string name="pfa_btn_alert_contact">Alert Trusted Contact</string>
+    <string name="pfa_btn_done">I\'m Done</string>
+    <string name="pfa_evaluating">Reviewing your responses with Medical ID…</string>
+
+    <!-- Medical ID Sheet -->
+    <string name="med_id_full_name">Full name (optional)</string>
+    <string name="med_id_dob">Date of birth (e.g. 1952-04-15)</string>
+    <string name="med_id_age">Age (e.g. 72)</string>
+    <string name="med_id_blood_type">Blood Type</string>
+    <string name="med_id_known_conditions">Known Conditions</string>
+    <string name="med_id_add_condition">Add another condition</string>
+    <string name="med_id_medications">Current Medications</string>
+    <string name="med_id_add_medication">Add another medication</string>
+    <string name="med_id_allergies">Allergies</string>
+    <string name="med_id_add_allergy">Add custom allergy</string>
+    <string name="med_id_mobility_history">Mobility aids or prior fall history (e.g. Uses cane, 1 fall this year)</string>
+    <string name="med_id_notes">Doctor / responder notes (optional)</string>
+    <string name="med_id_save">Save Medical ID</string>
+
+    <!-- Common Action Buttons & Tooltips -->
+    <string name="action_enable">Enable</string>
+    <string name="action_open">Open</string>
+    <string name="action_map">Map</string>
+    <string name="action_check_on_them">I\'m checking on them</string>
+    <string name="action_accept">Accept</string>
+    <string name="action_invite">Invite</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_link_account">Link account</string>
+    <string name="action_remove">Remove</string>
+    <string name="tt_show_qr">Show my personal QR code</string>
+    <string name="tt_scan_qr">Scan another user\'s QR code</string>
 </resources>

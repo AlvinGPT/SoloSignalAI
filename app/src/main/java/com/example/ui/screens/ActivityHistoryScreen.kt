@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.SafetyEventEntity
+import com.example.domain.MlExplainabilityRecord
 import com.example.domain.SafetyEventType
 import com.example.ui.components.PastelCard
 import com.example.ui.components.StatusPillBadge
@@ -289,7 +290,9 @@ private fun HistoryEventCard(event: SafetyEventEntity) {
 
     val hasExpandableDetails = event.outcomeSummary.isNotBlank() ||
         event.deliveryStatus.isNotBlank() ||
-        event.sensorDetails.isNotBlank()
+        event.sensorDetails.isNotBlank() ||
+        !event.modelVersion.isNullOrBlank() ||
+        !event.explainabilityJson.isNullOrBlank()
 
     PastelCard(
         backgroundColor = CardWhite,
@@ -405,6 +408,9 @@ private fun HistoryEventCard(event: SafetyEventEntity) {
 
         // Expandable Details section for sensor readings, acceleration values, and full diagnostics
         AnimatedVisibility(visible = detailsExpanded) {
+            val parsedExplainability = remember(event.explainabilityJson) {
+                MlExplainabilityRecord.fromCompactJson(event.explainabilityJson)
+            }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -423,6 +429,26 @@ private fun HistoryEventCard(event: SafetyEventEntity) {
                     Text(
                         text = "Result: ${event.deliveryStatus}",
                         style = MaterialTheme.typography.bodySmall,
+                        color = DeepCharcoal
+                    )
+                }
+                if (!event.modelVersion.isNullOrBlank() || !event.predictedActivity.isNullOrBlank()) {
+                    val confStr = event.modelConfidence?.let {
+                        String.format(Locale.US, "%.1f%%", it * 100f)
+                    } ?: "N/A (Rule Fallback)"
+                    val uncertainSuffix = if (event.isUncertain == true) " • Uncertain" else ""
+                    Text(
+                        text = "ML Model: ${event.modelVersion ?: "rule_fallback"} • Activity: ${event.predictedActivity ?: "N/A"} • Confidence: $confStr$uncertainSuffix",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DeepCharcoal,
+                        modifier = Modifier.testTag("history_ml_summary_${event.id}")
+                    )
+                }
+                if (parsedExplainability != null && parsedExplainability.whyCheckInInitiated.isNotBlank()) {
+                    Text(
+                        text = "Why Initiated: ${parsedExplainability.whyCheckInInitiated}",
+                        style = MaterialTheme.typography.labelSmall,
                         color = DeepCharcoal
                     )
                 }
@@ -454,6 +480,12 @@ private fun HistoryEventCard(event: SafetyEventEntity) {
 internal fun resolveCompactEventTitle(event: SafetyEventEntity): String {
     return when (event.eventType) {
         SafetyEventType.CHECK_IN_CANCELLED.name -> "Alert cancelled"
+        SafetyEventType.POST_FALL_FALSE_DETECTION_LOGGED.name -> "False detection (Not a fall)"
+        SafetyEventType.POST_FALL_ASSESSMENT_COMPLETED.name -> "Post-fall health check"
+        SafetyEventType.POST_FALL_ASSESSMENT_SKIPPED.name -> "Post-fall check skipped"
+        SafetyEventType.POST_FALL_SEVERE_SYMPTOM_SOS.name -> "Urgent SOS (Severe symptom)"
+        SafetyEventType.AI_HEALTH_CROSS_CHECK_GENERATED.name -> "AI Health Cross-Check"
+        SafetyEventType.MEDICAL_ID_UPDATED.name -> "Medical ID updated"
         SafetyEventType.TEST_ALERT_TRIGGERED.name -> "Test alert"
         SafetyEventType.RECIPIENT_ALERT_ACKNOWLEDGED.name -> "Alert acknowledged"
         SafetyEventType.RECIPIENT_ALERT_RECEIVED.name -> "Emergency alert received"
@@ -461,6 +493,9 @@ internal fun resolveCompactEventTitle(event: SafetyEventEntity): String {
         SafetyEventType.COUNTDOWN_EXPIRED.name,
         SafetyEventType.HELP_REQUESTED_NOW.name -> "Fall detected"
         else -> when {
+            event.title.contains("False detection", ignoreCase = true) -> "False detection (Not a fall)"
+            event.title.contains("Health", ignoreCase = true) -> "Post-fall health check"
+            event.title.contains("Medical ID", ignoreCase = true) -> "Medical ID updated"
             event.title.contains("Acknowledged", ignoreCase = true) -> "Alert acknowledged"
             event.title.contains("Cancel", ignoreCase = true) -> "Alert cancelled"
             event.title.contains("Test", ignoreCase = true) -> "Test alert"
@@ -474,11 +509,41 @@ internal fun resolveCompactEventTitle(event: SafetyEventEntity): String {
  * - "Acknowledged"
  * - "Sent"
  * - "Cancelled"
+ * - "False Alarm"
+ * - "Urgent" / "Caution" / "Low Risk"
+ * - "Saved"
  * - "Failed"
+ *
+ * Importantly, if the primary alert request was accepted in Cloud Firestore or delivered to the
+ * recipient's device, auxiliary notes (such as optional email or location unavailability) must
+ * NEVER cause the event to be mislabeled as "Failed".
  */
 internal fun resolveCompactEventStatus(event: SafetyEventEntity): Pair<String, Color> {
     val rawStatus = "${event.deliveryStatus} ${event.outcomeSummary}"
+    val primaryAlertAcceptedOrSent =
+        rawStatus.contains("accepted in Cloud Firestore", ignoreCase = true) ||
+            rawStatus.contains("Alert recorded in Firestore", ignoreCase = true) ||
+            rawStatus.contains("Push alert dispatched", ignoreCase = true) ||
+            rawStatus.contains("Delivered to recipient", ignoreCase = true) ||
+            rawStatus.contains("Email sent", ignoreCase = true) ||
+            rawStatus.contains("Sent by provider", ignoreCase = true) ||
+            rawStatus.contains("Request accepted", ignoreCase = true)
+
     return when {
+        event.eventType == SafetyEventType.POST_FALL_FALSE_DETECTION_LOGGED.name ->
+            "False Alarm" to SkyInfoSurface
+        event.eventType == SafetyEventType.POST_FALL_ASSESSMENT_SKIPPED.name ->
+            "Skipped" to LavenderSoftSurface
+        event.eventType == SafetyEventType.MEDICAL_ID_UPDATED.name ->
+            "Saved" to MintSoftSurface
+        event.eventType == SafetyEventType.POST_FALL_ASSESSMENT_COMPLETED.name ||
+            event.eventType == SafetyEventType.AI_HEALTH_CROSS_CHECK_GENERATED.name -> {
+            when {
+                rawStatus.contains("URGENT", ignoreCase = true) -> "Urgent" to CoralSoftSurface
+                rawStatus.contains("CAUTION", ignoreCase = true) -> "Caution" to LavenderSoftSurface
+                else -> "Completed" to MintSoftSurface
+            }
+        }
         event.eventType == SafetyEventType.RECIPIENT_ALERT_ACKNOWLEDGED.name ||
             rawStatus.contains("Acknowledged", ignoreCase = true) ||
             rawStatus.contains("checking on you", ignoreCase = true) ->
@@ -486,6 +551,8 @@ internal fun resolveCompactEventStatus(event: SafetyEventEntity): Pair<String, C
         event.eventType == SafetyEventType.CHECK_IN_CANCELLED.name ||
             event.deliveryStatus.contains("Cancel", ignoreCase = true) ->
             "Cancelled" to LavenderSoftSurface
+        primaryAlertAcceptedOrSent ->
+            "Sent" to MintSoftSurface
         rawStatus.contains("Fail", ignoreCase = true) ||
             rawStatus.contains("Not configured", ignoreCase = true) ||
             rawStatus.contains("Blocked", ignoreCase = true) ||
@@ -500,12 +567,25 @@ internal fun resolveCompactEventStatus(event: SafetyEventEntity): Pair<String, C
  * Produces a concise one-line human-readable summary while keeping raw sensor readings
  * and acceleration values inside the expandable Details section.
  */
-private fun resolveShortOneLineSummary(event: SafetyEventEntity): String {
+internal fun resolveShortOneLineSummary(event: SafetyEventEntity): String {
+    val (statusLabel, _) = resolveCompactEventStatus(event)
     return when (event.eventType) {
         SafetyEventType.CHECK_IN_CANCELLED.name ->
             "Cancelled by user during check-in."
+        SafetyEventType.POST_FALL_FALSE_DETECTION_LOGGED.name ->
+            event.outcomeSummary.ifBlank { "Recorded as a non-fall / phone drop for ML evaluation." }
+        SafetyEventType.POST_FALL_ASSESSMENT_COMPLETED.name ->
+            event.outcomeSummary.ifBlank { "Completed post-fall physical health check." }
+        SafetyEventType.POST_FALL_ASSESSMENT_SKIPPED.name ->
+            "User skipped the post-fall questionnaire."
+        SafetyEventType.POST_FALL_SEVERE_SYMPTOM_SOS.name ->
+            event.outcomeSummary.ifBlank { "Automatic SOS sent after severe post-fall symptom reported." }
+        SafetyEventType.AI_HEALTH_CROSS_CHECK_GENERATED.name ->
+            event.outcomeSummary.ifBlank { "Generated post-fall health & Medical ID safety advisory." }
+        SafetyEventType.MEDICAL_ID_UPDATED.name ->
+            event.outcomeSummary.ifBlank { "Voluntary Medical ID profile updated." }
         SafetyEventType.TEST_ALERT_TRIGGERED.name ->
-            if (event.deliveryStatus.contains("Fail", ignoreCase = true)) {
+            if (statusLabel == "Failed") {
                 "Test alert could not be delivered."
             } else {
                 "Test alert sent to emergency contact."

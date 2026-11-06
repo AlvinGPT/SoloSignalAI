@@ -1,7 +1,9 @@
 package com.example
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -55,6 +57,8 @@ import com.example.ui.components.SoloSignalLogo
 import com.example.ui.screens.ActivityHistoryScreen
 import com.example.ui.screens.CheckInOverlay
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.MedicalIdSheet
+import com.example.ui.screens.PostFallAssessmentScreen
 import com.example.ui.screens.RecipientEmergencyAlertScreen
 import com.example.ui.screens.SettingsPrivacyScreen
 import com.example.ui.screens.SignInScreen
@@ -65,9 +69,17 @@ import com.example.ui.theme.SoloSignalTheme
 import com.example.ui.theme.WarmMistBackground
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val repo = com.example.data.PreferencesRepository(newBase)
+        val langCode = repo.getSelectedLanguageCode()
+        val wrapped = com.example.util.LocaleHelper.wrap(newBase, langCode)
+        super.attachBaseContext(wrapped)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        configureLockScreenDisplay(true)
         handleIncomingAlertIntent(intent)
         setContent {
             SoloSignalTheme {
@@ -76,23 +88,94 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        configureLockScreenDisplay(true)
+    }
+
+    fun configureLockScreenDisplay(enable: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(enable)
+            setTurnScreenOn(enable)
+        } else {
+            @Suppress("DEPRECATION")
+            if (enable) {
+                window.addFlags(
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                )
+            } else {
+                window.clearFlags(
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                )
+            }
+        }
+    }
+
+    fun keepScreenActive(enable: Boolean) {
+        if (enable) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        configureLockScreenDisplay(true)
         handleIncomingAlertIntent(intent)
     }
 
     /**
-     * Extracts incoming emergency alert parameters from either:
-     * 1. A local/foreground notification PendingIntent (`EXTRA_INCOMING_ALERT_ID` etc.)
+     * Extracts incoming emergency or test alert parameters from either:
+     * 1. A local/foreground notification PendingIntent (`EXTRA_INCOMING_ALERT_ID`, `solosignal://incident/{id}`)
      * 2. A background Firebase Cloud Messaging notification tap (`alertId`, `senderName`, etc. in extras)
+     * 3. A Check-In notification tap when a fall incident is active
+     * 4. An automatic full-screen emergency intent when a fall countdown completes without user response
      */
     private fun handleIncomingAlertIntent(intent: Intent?) {
-        val extras = intent?.extras ?: return
-        val alertId = extras.getString(AlertDeliveryGateway.EXTRA_INCOMING_ALERT_ID)
-            ?.takeIf { it.isNotBlank() }
-            ?: extras.getString("alertId")?.takeIf { it.isNotBlank() }
+        if (intent == null) return
+
+        // 1. Check if an automatic full-screen emergency alert was triggered
+        val isOpenEmergency = intent.getBooleanExtra(AlertDeliveryGateway.EXTRA_OPEN_EMERGENCY_ACTIVE, false) ||
+            intent.action?.startsWith(AlertDeliveryGateway.ACTION_VIEW_ACTIVE_EMERGENCY) == true ||
+            intent.data?.getQueryParameter("type") == "emergency_fullscreen"
+
+        if (isOpenEmergency) {
+            configureLockScreenDisplay(true)
+            SafetyMonitoringController.getInstance(applicationContext).resumeEmergencyScreen()
+            return
+        }
+
+        // 2. Check if user tapped a Check-In notification (incident detected on this phone)
+        val isOpenCheckIn = intent.getBooleanExtra(AlertDeliveryGateway.EXTRA_OPEN_CHECK_IN, false) ||
+            intent.action?.startsWith(AlertDeliveryGateway.ACTION_VIEW_CHECK_IN) == true ||
+            intent.data?.getQueryParameter("type") == "checkin"
+
+        if (isOpenCheckIn) {
+            configureLockScreenDisplay(true)
+            SafetyMonitoringController.getInstance(applicationContext).resumeCheckInOverlay()
+            return
+        }
+
+        // 2. Extract stable incident ID from extras OR deep link URI
+        val extras = intent.extras
+        val alertIdFromData = intent.data?.let { uri ->
+            if (uri.scheme == "solosignal" && (uri.host == "incident" || uri.host == "alert")) {
+                uri.lastPathSegment
+            } else if (uri.pathSegments.contains("incident") || uri.pathSegments.contains("alert")) {
+                uri.lastPathSegment
+            } else null
+        }?.takeIf { it.isNotBlank() }
+
+        val alertId = extras?.getString(AlertDeliveryGateway.EXTRA_INCOMING_ALERT_ID)?.takeIf { it.isNotBlank() }
+            ?: extras?.getString("alertId")?.takeIf { it.isNotBlank() }
+            ?: alertIdFromData
             ?: return
+
+        val controller = SafetyMonitoringController.getInstance(applicationContext)
 
         // Do not re-open an alert that has already been acknowledged
         if (AlertDeliveryGateway(applicationContext).isAlertAcknowledged(alertId)) {
@@ -101,39 +184,53 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        val senderName = extras.getString(AlertDeliveryGateway.EXTRA_INCOMING_SENDER_NAME)
-            ?: extras.getString("senderName")
+        // Avoid creating duplicate alert screens if already viewing this exact incident
+        val currentActive = controller.activeRecipientEmergencyAlert.value
+        if (currentActive != null && currentActive.alertId == alertId) {
+            return
+        }
+
+        val senderName = extras?.getString(AlertDeliveryGateway.EXTRA_INCOMING_SENDER_NAME)
+            ?: extras?.getString("senderName")
+            ?: intent.data?.getQueryParameter("senderName")
             ?: "SoloSignal User"
-        val senderEmail = extras.getString(AlertDeliveryGateway.EXTRA_INCOMING_SENDER_EMAIL)
-            ?: extras.getString("senderEmail")
+        val senderEmail = extras?.getString(AlertDeliveryGateway.EXTRA_INCOMING_SENDER_EMAIL)
+            ?: extras?.getString("senderEmail")
+            ?: intent.data?.getQueryParameter("senderEmail")
             ?: ""
-        val triggerReason = extras.getString(AlertDeliveryGateway.EXTRA_INCOMING_TRIGGER_REASON)
-            ?: extras.getString("triggerReason")
+        val triggerReason = extras?.getString(AlertDeliveryGateway.EXTRA_INCOMING_TRIGGER_REASON)
+            ?: extras?.getString("triggerReason")
+            ?: intent.data?.getQueryParameter("triggerReason")
             ?: "Emergency check-in alert"
-        val locationSummary = extras.getString(AlertDeliveryGateway.EXTRA_INCOMING_LOCATION_SUMMARY)
-            ?: extras.getString("locationSummary")
+        val locationSummary = extras?.getString(AlertDeliveryGateway.EXTRA_INCOMING_LOCATION_SUMMARY)
+            ?: extras?.getString("locationSummary")
             ?: ""
-        val mapsUrl = extras.getString(AlertDeliveryGateway.EXTRA_INCOMING_MAPS_URL)
-            ?: extras.getString("googleMapsUrl")
-        val createdAt = if (extras.containsKey(AlertDeliveryGateway.EXTRA_INCOMING_CREATED_AT)) {
+        val mapsUrl = extras?.getString(AlertDeliveryGateway.EXTRA_INCOMING_MAPS_URL)
+            ?: extras?.getString("googleMapsUrl")
+            ?: intent.data?.getQueryParameter("mapsUrl")
+        val createdAt = if (extras != null && extras.containsKey(AlertDeliveryGateway.EXTRA_INCOMING_CREATED_AT)) {
             extras.getLong(AlertDeliveryGateway.EXTRA_INCOMING_CREATED_AT, System.currentTimeMillis())
         } else {
-            extras.getString("createdAtMillis")?.toLongOrNull() ?: System.currentTimeMillis()
+            extras?.getString("createdAtMillis")?.toLongOrNull()
+                ?: intent.data?.getQueryParameter("createdAt")?.toLongOrNull()
+                ?: System.currentTimeMillis()
         }
-        val isTest = if (extras.containsKey(AlertDeliveryGateway.EXTRA_INCOMING_IS_TEST)) {
+        val isTest = if (extras != null && extras.containsKey(AlertDeliveryGateway.EXTRA_INCOMING_IS_TEST)) {
             extras.getBoolean(AlertDeliveryGateway.EXTRA_INCOMING_IS_TEST, false)
         } else {
-            extras.getString("isTestAlert")?.equals("true", ignoreCase = true) == true
+            extras?.getString("isTestAlert")?.equals("true", ignoreCase = true) == true ||
+                intent.data?.getQueryParameter("isTest")?.equals("true", ignoreCase = true) == true ||
+                alertId.startsWith("test_")
         }
-        val lat = if (extras.containsKey(AlertDeliveryGateway.EXTRA_INCOMING_LATITUDE)) {
+        val lat = if (extras != null && extras.containsKey(AlertDeliveryGateway.EXTRA_INCOMING_LATITUDE)) {
             extras.getDouble(AlertDeliveryGateway.EXTRA_INCOMING_LATITUDE)
         } else {
-            extras.getString("latitude")?.toDoubleOrNull()
+            extras?.getString("latitude")?.toDoubleOrNull()
         }
-        val lng = if (extras.containsKey(AlertDeliveryGateway.EXTRA_INCOMING_LONGITUDE)) {
+        val lng = if (extras != null && extras.containsKey(AlertDeliveryGateway.EXTRA_INCOMING_LONGITUDE)) {
             extras.getDouble(AlertDeliveryGateway.EXTRA_INCOMING_LONGITUDE)
         } else {
-            extras.getString("longitude")?.toDoubleOrNull()
+            extras?.getString("longitude")?.toDoubleOrNull()
         }
 
         val initialAlert = IncomingRecipientAlert(
@@ -143,11 +240,11 @@ class MainActivity : ComponentActivity() {
             recipientName = "Trusted Contact",
             recipientEmail = "",
             isTestAlert = isTest,
-            subjectLine = "Emergency Alert from $senderName",
+            subjectLine = if (isTest) "[TEST] Alert from $senderName" else "Emergency Alert from $senderName",
             bodyText = "$senderName triggered an emergency check-in alert ($triggerReason). $locationSummary",
             triggerReason = triggerReason,
             deliveryState = AlertFirestoreRepository.STATE_DELIVERED_TO_RECIPIENT,
-            deliveryStatusDetail = "Opened from emergency push notification.",
+            deliveryStatusDetail = "Opened from emergency alert notification or deep link.",
             googleMapsUrl = mapsUrl,
             locationSummary = locationSummary,
             createdAtMillis = createdAt,
@@ -155,8 +252,7 @@ class MainActivity : ComponentActivity() {
             longitude = lng
         )
 
-        SafetyMonitoringController.getInstance(applicationContext)
-            .openRecipientEmergencyAlert(initialAlert, alertId)
+        controller.openRecipientEmergencyAlert(initialAlert, alertId)
     }
 }
 
@@ -179,6 +275,7 @@ fun SoloSignalAppRoot(
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
 
     val monitoringState by viewModel.monitoringState.collectAsStateWithLifecycle()
+    val realMonitoringStatus by viewModel.realMonitoringStatus.collectAsStateWithLifecycle()
     val latestFeatures by viewModel.latestFeatures.collectAsStateWithLifecycle()
     val recentMagnitudes by viewModel.recentMagnitudes.collectAsStateWithLifecycle()
     val countdownRemaining by viewModel.countdownRemaining.collectAsStateWithLifecycle()
@@ -204,6 +301,29 @@ fun SoloSignalAppRoot(
     val lastCapturedAudioClip by viewModel.lastCapturedAudioClip.collectAsStateWithLifecycle()
     val prefs by viewModel.preferencesState.collectAsStateWithLifecycle()
     val eventLogs by viewModel.eventLogs.collectAsStateWithLifecycle()
+    val modelComparisonReport by viewModel.modelComparisonReport.collectAsStateWithLifecycle()
+    val activePostFallAssessmentDraft by viewModel.activePostFallAssessmentDraft.collectAsStateWithLifecycle()
+    val latestHealthCrossCheckResult by viewModel.latestHealthCrossCheckResult.collectAsStateWithLifecycle()
+    val isEvaluatingHealthCrossCheck by viewModel.isEvaluatingHealthCrossCheck.collectAsStateWithLifecycle()
+    val medicalIdProfile by viewModel.medicalIdProfile.collectAsStateWithLifecycle()
+    val personalMovementProfile by viewModel.personalMovementProfile.collectAsStateWithLifecycle()
+    val personalLearningExamples by viewModel.personalLearningExamples.collectAsStateWithLifecycle()
+    var showMedicalIdEditor by rememberSaveable { mutableStateOf(false) }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.restoreMonitoringIfEnabled(context.applicationContext)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Gate all Cloud Firestore & alert operations behind Google Sign-In
     if (currentUser == null) {
@@ -214,10 +334,23 @@ fun SoloSignalAppRoot(
     }
 
     LaunchedEffect(currentUser?.uid) {
+        kotlinx.coroutines.delay(400L)
         viewModel.refreshCurrentGpsLocation()
+        viewModel.restoreMonitoringIfEnabled(context.applicationContext)
     }
 
     var currentTab by rememberSaveable { mutableStateOf(SoloSignalTab.HOME) }
+    val isEmergencyActive by viewModel.isEmergencyScreenActive.collectAsStateWithLifecycle()
+
+    // Manage keeping the screen awake while emergency or check-in is displayed
+    val activity = context as? MainActivity
+    androidx.compose.runtime.DisposableEffect(monitoringState == MonitoringState.CHECK_IN || isEmergencyActive) {
+        val keepOn = monitoringState == MonitoringState.CHECK_IN || isEmergencyActive
+        activity?.keepScreenActive(keepOn)
+        onDispose {
+            activity?.keepScreenActive(false)
+        }
+    }
 
     // Immediately after sign-up for a new account, show the "Add Emergency Contact" setup screen
     LaunchedEffect(requiresInitialContactSetup) {
@@ -229,6 +362,7 @@ fun SoloSignalAppRoot(
     // BackHandler for non-Home tabs to return cleanly to Home
     if (currentTab != SoloSignalTab.HOME &&
         monitoringState != MonitoringState.CHECK_IN &&
+        !isEmergencyActive &&
         activeRecipientEmergencyAlert == null
     ) {
         BackHandler {
@@ -239,13 +373,14 @@ fun SoloSignalAppRoot(
         }
     }
 
-    // Priority 1: Full-screen Check-In Overlay when a candidate fall is active on the sender's phone
-    if (monitoringState == MonitoringState.CHECK_IN) {
+    // Priority 1: Full-screen Emergency / Check-In Overlay when a candidate fall is active on the sender's phone
+    if (monitoringState == MonitoringState.CHECK_IN || isEmergencyActive) {
         CheckInOverlay(
             countdownRemaining = countdownRemaining,
             totalCountdownSeconds = prefs.countdownSeconds,
             candidateSummary = activeCandidateSummary,
             trustedContact = prefs.trustedContact,
+            isEmergencyTriggered = isEmergencyActive || (monitoringState != MonitoringState.CHECK_IN),
             onConfirmImOkay = { viewModel.confirmImOkay() },
             onRequestHelpNow = { viewModel.requestHelpNow() },
             onLocationPermissionGranted = { viewModel.refreshCurrentGpsLocation() },
@@ -265,6 +400,40 @@ fun SoloSignalAppRoot(
                 viewModel.dismissActiveRecipientEmergencyAlert()
             },
             onClose = { viewModel.dismissActiveRecipientEmergencyAlert() }
+        )
+        return
+    }
+
+    // Priority 3: Voluntary Medical ID Editor when opened from Home, Settings, or Post-Fall Assessment
+    if (showMedicalIdEditor) {
+        MedicalIdSheet(
+            currentProfile = medicalIdProfile,
+            onSaveProfile = { updated -> viewModel.saveMedicalIdProfile(updated) },
+            onClearProfile = { viewModel.clearMedicalIdProfile() },
+            onClose = { showMedicalIdEditor = false }
+        )
+        return
+    }
+
+    // Priority 4: Post-Fall Health Assessment & AI Health Cross-Check Result Screen (opened after "I'm OK" or manual launch)
+    if (activePostFallAssessmentDraft != null || latestHealthCrossCheckResult != null) {
+        PostFallAssessmentScreen(
+            draft = activePostFallAssessmentDraft,
+            result = latestHealthCrossCheckResult,
+            isEvaluating = isEvaluatingHealthCrossCheck,
+            medicalIdProfile = medicalIdProfile,
+            trustedContact = prefs.trustedContact,
+            deliveryStatus = deliveryStatus,
+            deliveryStatusDetail = deliveryStatusDetail,
+            onUpdateDraft = { updated -> viewModel.updatePostFallAssessmentDraft(updated) },
+            onRecordFalseDetectionAndClose = { verification, note ->
+                viewModel.recordFalseDetectionAndClose(verification, note)
+            },
+            onSubmitAssessment = { viewModel.submitPostFallAssessment() },
+            onSkipAssessment = { viewModel.skipPostFallAssessment() },
+            onDismissResult = { viewModel.dismissHealthCrossCheckResult() },
+            onRequestImmediateSos = { reason -> viewModel.requestHelpNow() },
+            onOpenMedicalIdEditor = { showMedicalIdEditor = true }
         )
         return
     }
@@ -357,6 +526,7 @@ fun SoloSignalAppRoot(
                     when (currentTab) {
                         SoloSignalTab.HOME -> HomeScreen(
                             monitoringState = monitoringState,
+                            realMonitoringStatus = realMonitoringStatus,
                             latestFeatures = latestFeatures,
                             recentMagnitudes = recentMagnitudes,
                             trustedContact = prefs.trustedContact,
@@ -373,6 +543,7 @@ fun SoloSignalAppRoot(
                             onToggleMonitoring = { viewModel.toggleMonitoring() },
                             onRunSyntheticTrace = { trace -> viewModel.runTrace(trace) },
                             onSendTestAlert = { viewModel.sendTestAlert() },
+                            onTriggerTestIncident = { viewModel.triggerLocalTestIncident() },
                             onRefreshLocation = { viewModel.refreshCurrentGpsLocation() },
                             onAcknowledgeIncomingAlert = { alertId ->
                                 viewModel.acknowledgeIncomingAlert(alertId)
@@ -388,7 +559,26 @@ fun SoloSignalAppRoot(
                             onTriggerSos = { viewModel.triggerManualSos() },
                             sosWorkflowState = sosWorkflowState,
                             sosAudioStatus = sosAudioStatus,
-                            sosAudioBufferedSeconds = sosAudioBufferedSeconds
+                            sosAudioBufferedSeconds = sosAudioBufferedSeconds,
+                            modelComparisonReport = modelComparisonReport,
+                            onRunModelBenchmark = { viewModel.runModelComparisonBenchmark() },
+                            medicalIdProfile = medicalIdProfile,
+                            onStartPostFallAssessment = { viewModel.startManualPostFallAssessment() },
+                            onOpenMedicalId = { showMedicalIdEditor = true },
+                            personalMovementProfile = personalMovementProfile,
+                            personalLearningExamples = personalLearningExamples,
+                            onTogglePersonalisationEnabled = { enabled ->
+                                viewModel.setPersonalisationEnabled(enabled)
+                            },
+                            onResetPersonalLearningToGeneral = {
+                                viewModel.resetPersonalProfileToGeneralModel()
+                            },
+                            onDeletePersonalLearningData = {
+                                viewModel.deleteAllPersonalLearningData()
+                            },
+                            onVerifySosLearningEvent = { alertId, linkedEventId ->
+                                viewModel.startPostFallAssessmentForSosEvent(alertId, linkedEventId)
+                            }
                         )
 
                         SoloSignalTab.ACTIVITY -> ActivityHistoryScreen(
@@ -474,6 +664,15 @@ fun SoloSignalAppRoot(
                             },
                             onDeleteStoredSosAudio = {
                                 viewModel.deleteStoredSosAudioRecordings()
+                            },
+                            medicalIdProfile = medicalIdProfile,
+                            onOpenMedicalId = { showMedicalIdEditor = true },
+                            onSaveMedicalIdProfile = { updated -> viewModel.saveMedicalIdProfile(updated) },
+                            onClearMedicalIdProfile = { viewModel.clearMedicalIdProfile() },
+                            selectedLanguageCode = prefs.selectedLanguageCode,
+                            onLanguageSelected = { langCode ->
+                                viewModel.setSelectedLanguage(context, langCode)
+                                (context as? android.app.Activity)?.recreate()
                             }
                         )
                     }

@@ -23,7 +23,18 @@ class CheckInActionReceiver : BroadcastReceiver() {
         val controller = SafetyMonitoringController.getInstance(context.applicationContext)
         when (action) {
             ACTION_IM_OKAY -> controller.cancelCheckInByUser("Notification action: I'm okay")
-            ACTION_SEND_HELP_NOW -> controller.requestImmediateHelp("Notification action: Need help now")
+            ACTION_SEND_HELP_NOW -> {
+                val pendingResult = goAsync()
+                controller.requestImmediateHelp(
+                    "Notification action: Need help now",
+                    onComplete = {
+                        try {
+                            pendingResult.finish()
+                        } catch (_: Exception) {
+                        }
+                    }
+                )
+            }
             ACTION_STOP_MONITORING -> controller.stopMonitoring()
             ACTION_ACKNOWLEDGE_RECIPIENT_ALERT -> {
                 val alertId = intent.getStringExtra(EXTRA_ALERT_ID).orEmpty().trim()

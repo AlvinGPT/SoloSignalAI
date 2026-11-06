@@ -44,6 +44,7 @@ class SensorMonitorManager(
 
     private var isListenerRegistered = false
     private var lastSampleTimestampNanos = 0L
+    private var lastRealSampleWallClockMillis = 0L
     private var latestGxRadPerSec = 0f
     private var latestGyRadPerSec = 0f
     private var latestGzRadPerSec = 0f
@@ -89,6 +90,7 @@ class SensorMonitorManager(
             isListenerRegistered = false
         }
         lastSampleTimestampNanos = 0L
+        lastRealSampleWallClockMillis = 0L
         latestGxRadPerSec = 0f
         latestGyRadPerSec = 0f
         latestGzRadPerSec = 0f
@@ -97,6 +99,12 @@ class SensorMonitorManager(
     }
 
     fun isActivelyListening(): Boolean = isListenerRegistered
+
+    fun isActivelyProducingReadings(): Boolean {
+        if (!isListenerRegistered) return false
+        if (lastRealSampleWallClockMillis == 0L) return false
+        return (System.currentTimeMillis() - lastRealSampleWallClockMillis) < 3_000L
+    }
 
     override fun onSensorChanged(event: SensorEvent?) {
         val sensorEvent = event ?: return
@@ -119,6 +127,7 @@ class SensorMonitorManager(
             return
         }
         lastSampleTimestampNanos = sensorEvent.timestamp
+        lastRealSampleWallClockMillis = System.currentTimeMillis()
 
         val gyroFresh = latestGyroTimestampNanos != 0L &&
             kotlin.math.abs(sensorEvent.timestamp - latestGyroTimestampNanos) <= 250_000_000L
