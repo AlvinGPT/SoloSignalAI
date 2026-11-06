@@ -1,7 +1,7 @@
 {
   "projectId": "halogen-plane-hj1d7",
   "appId": "1:480836778120:web:8b4d5bf0da2efb357c473d",
-  "apiKey": "AIzaSyC_V8PPGI8H1A9cR8KQvqnKGWb353He8uU",
+  "apiKey": "MY_GEMINI_API_KEY",
   "authDomain": "halogen-plane-hj1d7.firebaseapp.com",
   "storageBucket": "halogen-plane-hj1d7.firebasestorage.app",
   "messagingSenderId": "480836778120",
