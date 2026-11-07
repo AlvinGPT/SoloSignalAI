@@ -1,4 +1,5 @@
 # SoloSignal AI — Experimental Personal-Safety Android App
+🏆 **1st Place Winner – AI Category (Grade 11)** | Gulf Medical University MASE 2026
 
 > **Important Safety Disclaimer:** SoloSignal AI is an experimental engineering prototype that screens phone motion sensor patterns for possible falls and runs a cancelable check-in countdown. **It is NOT a certified medical device and never guarantees fall detection, safety, or emergency alert delivery.** False positives (e.g., dropping the phone) and missed falls are possible.
 
